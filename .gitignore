@@ -1,0 +1,14 @@
+# Ignore build outputs
+[Bb]in/
+[Oo]bj/
+
+# Game assemblies / publicized readable — regenerate locally
+lib/
+*.dll
+*.pdb
+*.mdb
+
+# IDE
+.vs/
+*.user
+*.suo

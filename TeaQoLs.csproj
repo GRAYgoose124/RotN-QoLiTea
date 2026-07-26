@@ -1,0 +1,59 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>TeaQoLs</AssemblyName>
+    <Product>TeaQoLs</Product>
+    <Version>1.0.0</Version>
+    <BepInExPluginGuid>rotn.dimethyltea.TeaQoLs</BepInExPluginGuid>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>latest</LangVersion>
+    <RestoreAdditionalProjectSources>
+      https://api.nuget.org/v3/index.json;
+      https://nuget.bepinex.dev/v3/index.json;
+      https://nuget.samboy.dev/v3/index.json
+    </RestoreAdditionalProjectSources>
+    <RootNamespace>TeaQoLs</RootNamespace>
+    <GameManaged Condition="'$(GameManaged)' == ''">A:\SteamLibrary\steamapps\common\RiftOfTheNecroDancerOSTVolume1\RiftOfTheNecroDancer_Data\Managed</GameManaged>
+    <GamePlugins Condition="'$(GamePlugins)' == ''">A:\SteamLibrary\steamapps\common\RiftOfTheNecroDancerOSTVolume1\BepInEx\plugins</GamePlugins>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
+    <PackageReference Include="BepInEx.Core" Version="5.*" />
+    <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
+    <PackageReference Include="UnityEngine.Modules" Version="2021.3.43" IncludeAssets="compile" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="ROTN">
+      <HintPath>lib/RiftReadable.dll</HintPath>
+    </Reference>
+    <Reference Include="Unity.Mathematics">
+      <HintPath>$(GameManaged)\Unity.Mathematics.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(GameManaged)\UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.InputSystem">
+      <HintPath>$(GameManaged)\Unity.InputSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="RiftOfTheNecroManager">
+      <HintPath>$(GamePlugins)\RiftOfTheNecroManager.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="TeaQoLs.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="TeaQoLs.Tests/**" />
+    <None Remove="TeaQoLs.Tests/**" />
+  </ItemGroup>
+
+</Project>
