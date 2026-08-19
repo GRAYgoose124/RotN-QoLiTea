@@ -21,6 +21,7 @@
   <ItemGroup>
     <Compile Include="..\Features\RandomSong\RandomSongRules.cs" Link="RandomSongRules.cs" />
     <Compile Include="..\Features\LazyCustomTracks\CacheReconcilePolicy.cs" Link="CacheReconcilePolicy.cs" />
+    <Compile Include="..\Features\LazyCustomTracks\CacheFolderFieldsPolicy.cs" Link="CacheFolderFieldsPolicy.cs" />
     <Compile Include="..\Features\LazyCustomTracks\WorkshopDeltaPolicy.cs" Link="WorkshopDeltaPolicy.cs" />
     <Compile Include="..\Features\LazyCustomTracks\ReconcileKickPolicy.cs" Link="ReconcileKickPolicy.cs" />
     <Compile Include="..\Features\LazyCustomTracks\ReSortGatePolicy.cs" Link="ReSortGatePolicy.cs" />

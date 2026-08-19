@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Shared;
 using Shared.TrackData;
 
@@ -25,6 +26,12 @@ public sealed class CachedTrackDto
     public double SortOrder { get; set; }
     public TrackCategory Category { get; set; }
     public List<Difficulty> Difficulties { get; set; } = new List<Difficulty>();
+    /// <summary>
+    /// Per-difficulty intensity/BPM so stock folder grouping does not dump stubs into Unknowns.
+    /// Absent on caches written before this field existed.
+    /// </summary>
+    public List<CachedDifficultyDto> DifficultyDetails { get; set; } = new List<CachedDifficultyDto>();
+    public bool PersistedDifficultyDetails { get; set; }
 
     public static CachedTrackDto FromMetadata(ITrackMetadata track)
     {
@@ -45,12 +52,23 @@ public sealed class CachedTrackDto
             SortOrder = track.SortOrder,
             Category = track.Category,
             BasePath = track.BasePath,
+            PersistedDifficultyDetails = true,
         };
 
         if (track.Difficulties != null)
         {
-            foreach (var d in track.Difficulties)
+            foreach (var d in track.Difficulties.Distinct())
+            {
                 dto.Difficulties.Add(d);
+                var info = track.GetDifficulty(d);
+                dto.DifficultyDetails.Add(new CachedDifficultyDto
+                {
+                    Difficulty = d,
+                    Intensity = info?.Intensity,
+                    BeatsPerMinute = info?.BeatsPerMinute ?? track.BeatsPerMinute,
+                    BeatCount = info?.BeatCount ?? track.BeatCount,
+                });
+            }
         }
 
         if (track is Shared.UGC.Steam.SteamWorkshopUgcTrackMetadata workshop)

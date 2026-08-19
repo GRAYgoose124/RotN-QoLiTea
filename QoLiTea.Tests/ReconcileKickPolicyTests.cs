@@ -31,4 +31,22 @@ public class ReconcileKickPolicyTests
         Assert.True(ReconcileKickPolicy.ShouldKickImmediateFullReconcile(hasCache: false));
         Assert.False(ReconcileKickPolicy.ShouldSyncDeltasOnWarmOpen(hasCache: false));
     }
+
+    [Fact]
+    public void Warm_cache_missing_folder_fields_kicks_full_reconcile()
+    {
+        Assert.True(ReconcileKickPolicy.ShouldKickImmediateFullReconcile(
+            hasCache: true, needsFolderBackfill: true));
+        Assert.False(ReconcileKickPolicy.ShouldSyncDeltasOnWarmOpen(
+            hasCache: true, needsFolderBackfill: true));
+    }
+
+    [Fact]
+    public void Warm_cache_with_folder_fields_stays_on_deltas()
+    {
+        Assert.False(ReconcileKickPolicy.ShouldKickImmediateFullReconcile(
+            hasCache: true, needsFolderBackfill: false));
+        Assert.True(ReconcileKickPolicy.ShouldSyncDeltasOnWarmOpen(
+            hasCache: true, needsFolderBackfill: false));
+    }
 }

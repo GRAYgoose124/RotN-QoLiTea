@@ -206,7 +206,83 @@ public static class TrackListCache
         return string.Join("\n", tracks
             .Where(t => t != null && !string.IsNullOrEmpty(t.LevelId))
             .OrderBy(t => t.LevelId, StringComparer.Ordinal)
-            .Select(t => $"{t.LevelId}|{t.TrackName}|{t.TimeAdded}"));
+            .Select(t => $"{t.LevelId}|{t.TrackName}|{t.TimeAdded}|{DifficultySignature(t)}"));
+    }
+
+    private static string DifficultySignature(ITrackMetadata track)
+    {
+        if (track?.Difficulties == null)
+            return "";
+
+        var rows = track.Difficulties
+            .Distinct()
+            .OrderBy(d => (int)d)
+            .Select(d =>
+            {
+                var info = track.GetDifficulty(d);
+                string intensity = info?.Intensity?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "";
+                string bpm = info?.BeatsPerMinute?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "";
+                return (Difficulty: (int)d, Intensity: intensity, Bpm: bpm);
+            });
+        return CacheFolderFieldsPolicy.FormatDifficultySignature(rows);
+    }
+
+    /// <summary>Difficulty/intensity/BPM signature for an in-cache level, or empty if missing.</summary>
+    public static string DifficultySignatureFor(string levelId)
+    {
+        if (string.IsNullOrEmpty(levelId))
+            return "";
+
+        lock (Gate)
+        {
+            if (_tracks == null)
+                return "";
+            var track = _tracks.FirstOrDefault(t => t != null && t.LevelId == levelId);
+            return DifficultySignature(track);
+        }
+    }
+
+    public static string FormatDifficultySignature(ITrackMetadata track)
+        => DifficultySignature(track);
+
+    /// <summary>
+    /// True when the in-memory list is stubs from an old cache that never stored intensity/BPM.
+    /// </summary>
+    public static bool NeedsFolderFieldBackfill
+    {
+        get
+        {
+            lock (Gate)
+            {
+                if (_tracks == null || _tracks.Count == 0)
+                    return false;
+
+                bool anyDetails = false;
+                foreach (var track in _tracks)
+                {
+                    if (track == null)
+                        continue;
+                    if (track is CachedTrackMetadata stub)
+                    {
+                        var dto = stub.Dto;
+                        int detailCount = dto?.DifficultyDetails?.Count ?? 0;
+                        if (CacheFolderFieldsPolicy.HasPersistedDetails(
+                                dto?.PersistedDifficultyDetails ?? false, detailCount))
+                        {
+                            anyDetails = true;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        anyDetails = true;
+                        break;
+                    }
+                }
+
+                return CacheFolderFieldsPolicy.NeedsFolderBackfill(_tracks.Count, anyDetails);
+            }
+        }
     }
 
     public static string ComputeLocalFingerprint()

@@ -16,10 +16,23 @@ public sealed class CachedTrackMetadata : ITrackMetadata
     {
         Dto = dto ?? throw new ArgumentNullException(nameof(dto));
         _difficulties = new Dictionary<Difficulty, CachedTrackDifficulty>();
-        if (dto.Difficulties != null)
+        if (dto.DifficultyDetails != null && dto.DifficultyDetails.Count > 0)
+        {
+            foreach (var row in dto.DifficultyDetails)
+            {
+                if (row == null)
+                    continue;
+                _difficulties[row.Difficulty] = new CachedTrackDifficulty(
+                    row.Difficulty,
+                    row.BeatsPerMinute ?? dto.BeatsPerMinute,
+                    row.BeatCount ?? dto.BeatCount,
+                    row.Intensity);
+            }
+        }
+        else if (dto.Difficulties != null)
         {
             foreach (var d in dto.Difficulties.Distinct())
-                _difficulties[d] = new CachedTrackDifficulty(d, dto.BeatsPerMinute, dto.BeatCount);
+                _difficulties[d] = new CachedTrackDifficulty(d, dto.BeatsPerMinute, dto.BeatCount, intensity: null);
         }
     }
 
@@ -68,16 +81,17 @@ public sealed class CachedTrackMetadata : ITrackMetadata
 
     private sealed class CachedTrackDifficulty : ITrackDifficulty
     {
-        public CachedTrackDifficulty(Difficulty difficulty, float? bpm, float? beatCount)
+        public CachedTrackDifficulty(Difficulty difficulty, float? bpm, float? beatCount, float? intensity)
         {
             Difficulty = difficulty;
             BeatsPerMinute = bpm;
             BeatCount = beatCount;
+            Intensity = intensity;
         }
 
         public Difficulty Difficulty { get; }
         public string BeatmapFilePath => null;
-        public float? Intensity => null;
+        public float? Intensity { get; }
         public float? BeatCount { get; }
         public float? BeatsPerMinute { get; }
         public float? FinalInputBeatOverride => null;

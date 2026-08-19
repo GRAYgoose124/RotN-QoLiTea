@@ -52,12 +52,15 @@ public static class LazyTrackListPatches
         bool hasCache = TrackListCache.TryGet(out List<ITrackMetadata> cached)
             && cached != null
             && cached.Count > 0;
+        bool needsFolderBackfill = TrackListCache.NeedsFolderFieldBackfill;
 
         if (hasCache)
         {
             __instance._customTrackMetadatas = cached;
             Plugin.Logger.LogInfo(
-                $"LazyCustomTracks: serving {cached.Count} cached tracks (delta sync, no full scan)");
+                needsFolderBackfill
+                    ? $"LazyCustomTracks: serving {cached.Count} cached tracks — folder fields missing, full reconcile"
+                    : $"LazyCustomTracks: serving {cached.Count} cached tracks (delta sync, no full scan)");
         }
         else
         {
@@ -70,11 +73,11 @@ public static class LazyTrackListPatches
         _activeController = __instance;
         LiveDeltaService.ResetBaselineFromCache();
 
-        if (ReconcileKickPolicy.ShouldKickImmediateFullReconcile(hasCache))
+        if (ReconcileKickPolicy.ShouldKickImmediateFullReconcile(hasCache, needsFolderBackfill))
         {
             KickReconcile(__instance, fetchRemote);
         }
-        else if (ReconcileKickPolicy.ShouldSyncDeltasOnWarmOpen(hasCache))
+        else if (ReconcileKickPolicy.ShouldSyncDeltasOnWarmOpen(hasCache, needsFolderBackfill))
         {
             // Next Update: cheap +1/-1 Workshop/local sync (not QueryAllTracks).
             _warmDeltaPending = true;
@@ -338,7 +341,7 @@ public static class LazyTrackListPatches
                 return;
 
             var current = displayed[trackIndex];
-            if (current == null || !(current is CachedTrackMetadata))
+            if (current == null)
                 return;
 
             TryHydrateByLevelId(controller, current.LevelId);
@@ -364,9 +367,8 @@ public static class LazyTrackListPatches
             if (idx < 0)
                 return;
 
-            if (!(list[idx] is CachedTrackMetadata))
-                return;
-
+            // Always re-read from disk/provider. Skipping non-stubs left Hard/Impossible
+            // stuck after info.json gained Easy/Medium (hydrate ran once, then never again).
             var hydrated = TrackHydrator.TryHydrate(levelId);
             if (hydrated == null)
             {
@@ -377,6 +379,17 @@ public static class LazyTrackListPatches
             list[idx] = hydrated;
             TrackListCache.Upsert(hydrated, saveDisk: false);
             _cacheDirty = true;
+
+            var displayed = controller._displayedTrackMetaDatas;
+            if (displayed != null)
+            {
+                for (int i = 0; i < displayed.Length; i++)
+                {
+                    if (displayed[i] != null && displayed[i].LevelId == levelId)
+                        displayed[i] = hydrated;
+                }
+            }
+
             Plugin.Logger?.LogInfo($"LazyCustomTracks: hydrated {levelId} for play");
         }
         catch (Exception e)

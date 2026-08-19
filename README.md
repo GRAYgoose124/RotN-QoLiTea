@@ -18,10 +18,10 @@ On the **official** or **Custom Music** title list, press the random key (defaul
 
 Speeds up the Custom Music menu with a persistent disk cache and background refresh. (For when loading takes a while and you have many workshop items.)
 
-1. Restores the last display list across restarts.
-2. Serves cache immediately on open; reconciles in the background; writes disk only if the result diverges.
-3. Workshop install/unsub and local folder add/remove update the open list without a full rescan.
-4. Select/submit sync-hydrates a cold stub so a track is playable before reconcile finishes.
+1. Restores the last display list across restarts, including per-difficulty intensity/BPM so stock list folders do not dump tracks into Unknowns.
+2. Serves cache immediately on open; reconciles in the background; writes disk only if the result diverges. Old caches missing folder fields get one full reconcile.
+3. Workshop install/unsub and local folder add/remove update the open list without a full rescan. Warm-open also re-reads local `info.json` so new difficulties appear in Easy/Medium folders.
+4. Select/submit sync-hydrates from disk (not only cold stubs), so local `info.json` difficulty edits show after reopening the track — no full restart needed.
 
 **Clear cache:** NecroManager `RunClearTrackListCache` (one-shot) deletes `track-list-cache.json` and kicks a full reconcile if Custom Music is already open.
 

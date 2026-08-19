@@ -111,13 +111,11 @@ public static class LiveDeltaService
 
         bool changed = RemoveMissingLocals(expectedLocal);
 
+        // Locals are few; always re-read info.json so difficulty add/remove (Easy/Medium)
+        // shows in folder filters without RunClearTrackListCache. Fingerprint is folder
+        // mtime only — editing files inside often does not bump it on Windows.
         foreach (string levelId in expectedLocal)
         {
-            if (_lastKnownLevelIds.Contains(levelId))
-                continue;
-            if (TrackListCache.Snapshot().Any(t => t != null && t.LevelId == levelId))
-                continue;
-
             if (!folderByLevelId.TryGetValue(levelId, out string folder))
                 continue;
 
@@ -125,9 +123,19 @@ public static class LiveDeltaService
             if (track == null)
                 continue;
 
+            bool isNew = !_lastKnownLevelIds.Contains(levelId)
+                         && !TrackListCache.Snapshot().Any(t => t != null && t.LevelId == levelId);
+            string before = TrackListCache.DifficultySignatureFor(levelId);
+            string after = TrackListCache.FormatDifficultySignature(track);
+            if (!isNew && string.Equals(before, after, StringComparison.Ordinal))
+                continue;
+
             TrackListCache.Upsert(track, saveDisk: false);
             changed = true;
-            Plugin.Logger?.LogInfo($"LiveDeltaService: +local {levelId}");
+            Plugin.Logger?.LogInfo(
+                isNew
+                    ? $"LiveDeltaService: +local {levelId}"
+                    : $"LiveDeltaService: refresh local {levelId}");
         }
 
         _lastLocalFingerprint = TrackListCache.ComputeLocalFingerprint();
