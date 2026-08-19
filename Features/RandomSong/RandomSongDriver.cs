@@ -8,7 +8,7 @@ using Shared.UGC.Steam;
 using UnityEngine;
 using static Shared.TrackSelection.BaseTrackSelectionOptionGroup;
 
-namespace TeaQoLs.Features.RandomSong;
+namespace QoLiTea.Features.RandomSong;
 
 internal static class TrackListGate
 {
@@ -67,7 +67,7 @@ internal sealed class RandomSongDriver
         if (IsRunning || controller == null)
             return false;
 
-        Plugin.Logger?.LogInfo("TeaQoLs: starting custom jukebox coroutine on controller");
+        Plugin.Logger?.LogInfo("QoLiTea: starting custom jukebox coroutine on controller");
         _running = controller.StartCoroutine(RunCustom(controller));
         return true;
     }
@@ -77,7 +77,7 @@ internal sealed class RandomSongDriver
         if (IsRunning || controller == null)
             return false;
 
-        Plugin.Logger?.LogInfo("TeaQoLs: starting official jukebox coroutine on controller");
+        Plugin.Logger?.LogInfo("QoLiTea: starting official jukebox coroutine on controller");
         _running = controller.StartCoroutine(RunOfficial(controller));
         return true;
     }
@@ -95,7 +95,7 @@ internal sealed class RandomSongDriver
             var group = controller._infiniteTrackSelectionOptionGroup;
             if (group == null || !group.IsInitialized)
             {
-                Plugin.Logger?.LogWarning("TeaQoLs: official group missing/uninitialized");
+                Plugin.Logger?.LogWarning("QoLiTea: official group missing/uninitialized");
                 yield break;
             }
 
@@ -131,7 +131,7 @@ internal sealed class RandomSongDriver
             var group = controller._trackSelectionOptionGroup;
             if (group == null || !group.IsInitialized)
             {
-                Plugin.Logger?.LogWarning("TeaQoLs: custom group missing/uninitialized");
+                Plugin.Logger?.LogWarning("QoLiTea: custom group missing/uninitialized");
                 yield break;
             }
 
@@ -204,7 +204,7 @@ internal sealed class RandomSongDriver
             controller.HandleTrackSelected(idx);
             yield return null;
 
-            Plugin.Logger?.LogInfo($"TeaQoLs: resolving custom track {levelId} (attempt {attempt + 1})");
+            Plugin.Logger?.LogInfo($"QoLiTea: resolving custom track {levelId} (attempt {attempt + 1})");
 
             ITrackMetadata trackMetadata = null;
             var steamTask = SteamWorkshopUgcTrackProvider.Instance.GetTrackByLevelId(levelId);
@@ -212,7 +212,7 @@ internal sealed class RandomSongDriver
                 yield return null;
 
             if (steamTask != null && steamTask.IsFaulted)
-                Plugin.Logger?.LogWarning($"TeaQoLs: Steam GetTrackByLevelId faulted: {steamTask.Exception?.GetBaseException().Message}");
+                Plugin.Logger?.LogWarning($"QoLiTea: Steam GetTrackByLevelId faulted: {steamTask.Exception?.GetBaseException().Message}");
             else if (steamTask != null)
                 trackMetadata = steamTask.Result;
 
@@ -223,7 +223,7 @@ internal sealed class RandomSongDriver
                     yield return null;
 
                 if (localTask != null && localTask.IsFaulted)
-                    Plugin.Logger?.LogWarning($"TeaQoLs: Local GetTrackByLevelId faulted: {localTask.Exception?.GetBaseException().Message}");
+                    Plugin.Logger?.LogWarning($"QoLiTea: Local GetTrackByLevelId faulted: {localTask.Exception?.GetBaseException().Message}");
                 else if (localTask != null)
                     trackMetadata = localTask.Result;
             }
@@ -243,7 +243,7 @@ internal sealed class RandomSongDriver
 
             if (trackMetadata == null)
             {
-                Plugin.Logger?.LogWarning($"TeaQoLs: could not resolve custom track {levelId}");
+                Plugin.Logger?.LogWarning($"QoLiTea: could not resolve custom track {levelId}");
                 var nextMissing = PickUnusedEligibleIndex(metas, eligibleIndices, tried, idx);
                 if (nextMissing == null)
                     yield break;
@@ -271,13 +271,13 @@ internal sealed class RandomSongDriver
             if (controller._submittedTrackDifficulty != null
                 && !string.IsNullOrEmpty(controller._submittedTrackDifficulty.BeatmapFilePath))
             {
-                Plugin.Logger?.LogInfo($"TeaQoLs: starting custom stage {levelId}");
+                Plugin.Logger?.LogInfo($"QoLiTea: starting custom stage {levelId}");
                 controller.GoToSelectedStage();
                 yield break;
             }
 
             Plugin.Logger?.LogWarning(
-                $"TeaQoLs: {levelId} unavailable for {controller._selectedDifficulty} after resolve — trying another");
+                $"QoLiTea: {levelId} unavailable for {controller._selectedDifficulty} after resolve — trying another");
 
             var next = PickUnusedEligibleIndex(metas, eligibleIndices, tried, idx);
             if (next == null)
@@ -288,7 +288,7 @@ internal sealed class RandomSongDriver
             yield return WaitHold(group, RandomSongRules.DeadStopHoldSeconds);
         }
 
-        Plugin.Logger?.LogWarning("TeaQoLs: no custom track playable on current difficulty");
+        Plugin.Logger?.LogWarning("QoLiTea: no custom track playable on current difficulty");
     }
 
     private static int? PickUnusedEligibleIndex(
@@ -393,7 +393,7 @@ internal sealed class RandomSongDriver
         var metas = group._trackMetaData;
         if (metas == null || metas.Count == 0)
         {
-            Plugin.Logger?.LogWarning("TeaQoLs: list empty");
+            Plugin.Logger?.LogWarning("QoLiTea: list empty");
             yield break;
         }
 
@@ -406,7 +406,7 @@ internal sealed class RandomSongDriver
             && CountOpenFolders(metas) == 0
             && CountClosedFolders(metas) > 0)
         {
-            Plugin.Logger?.LogInfo("TeaQoLs: no folders open; opening all before roll");
+            Plugin.Logger?.LogInfo("QoLiTea: no folders open; opening all before roll");
             OpenAllClosedFolders(metas, group, selectedDifficulty, isLocked);
             yield return null;
             yield return null;
@@ -415,10 +415,10 @@ internal sealed class RandomSongDriver
         }
         else if (eligibleIndices.Count == 0)
         {
-            Plugin.Logger?.LogInfo("TeaQoLs: no viewable playable tracks; opening all closed folders");
+            Plugin.Logger?.LogInfo("QoLiTea: no viewable playable tracks; opening all closed folders");
             if (!OpenAllClosedFolders(metas, group, selectedDifficulty, isLocked))
             {
-                Plugin.Logger?.LogWarning("TeaQoLs: no eligible tracks (and no closed folder to open)");
+                Plugin.Logger?.LogWarning("QoLiTea: no eligible tracks (and no closed folder to open)");
                 yield break;
             }
 
@@ -430,13 +430,13 @@ internal sealed class RandomSongDriver
 
         if (eligibleIndices.Count == 0)
         {
-            Plugin.Logger?.LogWarning("TeaQoLs: still no eligible tracks after opening folders");
+            Plugin.Logger?.LogWarning("QoLiTea: still no eligible tracks after opening folders");
             yield break;
         }
 
         var trackRing = eligibleIndices;
         Plugin.Logger?.LogInfo(
-            $"TeaQoLs: pool eligible={trackRing.Count} navigable={RandomSongRules.CollectNavigableIndices(navigable).Count}/{metas.Count} (sel={group._selectedTrackIndex})");
+            $"QoLiTea: pool eligible={trackRing.Count} navigable={RandomSongRules.CollectNavigableIndices(navigable).Count}/{metas.Count} (sel={group._selectedTrackIndex})");
 
         setInputDisabled(true);
 
@@ -465,7 +465,7 @@ internal sealed class RandomSongDriver
             n => UnityEngine.Random.Range(0, n));
         if (target == null)
         {
-            Plugin.Logger?.LogWarning("TeaQoLs: pick failed");
+            Plugin.Logger?.LogWarning("QoLiTea: pick failed");
             yield break;
         }
 
@@ -475,7 +475,7 @@ internal sealed class RandomSongDriver
             fromPos = 0;
         if (toPos < 0)
         {
-            Plugin.Logger?.LogWarning($"TeaQoLs: target {target.Value} not on track ring");
+            Plugin.Logger?.LogWarning($"QoLiTea: target {target.Value} not on track ring");
             yield break;
         }
 
@@ -499,7 +499,7 @@ internal sealed class RandomSongDriver
         var budget = RandomSongRules.TargetScrollSeconds(trackRing.Count, plan.VisualSteps);
         var landName = metas[target.Value]?.TrackName ?? "?";
         Plugin.Logger?.LogInfo(
-            $"TeaQoLs: pick [{target.Value}] {landName} — visual={plan.VisualSteps} tracks={plan.TrackSteps} dir={plan.Direction} budget={budget:0.00}s (from {group._selectedTrackIndex})");
+            $"QoLiTea: pick [{target.Value}] {landName} — visual={plan.VisualSteps} tracks={plan.TrackSteps} dir={plan.Direction} budget={budget:0.00}s (from {group._selectedTrackIndex})");
 
         yield return ScrollToIndex(
             group, eligible, plan.Direction, plan.VisualSteps, plan.TrackSteps, budget, target.Value);
@@ -510,20 +510,20 @@ internal sealed class RandomSongDriver
         if (group._selectedTrackIndex != target.Value)
         {
             Plugin.Logger?.LogWarning(
-                $"TeaQoLs: selection {group._selectedTrackIndex} ≠ pick {target.Value}; snapping");
+                $"QoLiTea: selection {group._selectedTrackIndex} ≠ pick {target.Value}; snapping");
             yield return JumpSelectionToIndex(group, eligible, target.Value);
         }
 
         if (!IsPlayableSelection(group, metas, selectedDifficulty, isLocked))
         {
             Plugin.Logger?.LogWarning(
-                $"TeaQoLs: landed non-playable at {group._selectedTrackIndex}; aborting play.");
+                $"QoLiTea: landed non-playable at {group._selectedTrackIndex}; aborting play.");
             yield break;
         }
 
         var startedName = metas[group._selectedTrackIndex]?.TrackName ?? "?";
         Plugin.Logger?.LogInfo(
-            $"TeaQoLs: starting stage at {group._selectedTrackIndex} [{startedName}]");
+            $"QoLiTea: starting stage at {group._selectedTrackIndex} [{startedName}]");
         var cont = afterLand(eligible, eligibleIndices);
         if (cont != null)
             yield return cont;
@@ -587,7 +587,7 @@ internal sealed class RandomSongDriver
             if (childPlayable <= 0)
                 continue;
 
-            Plugin.Logger?.LogInfo($"TeaQoLs: opening folder [{i}] {folder.TrackName}");
+            Plugin.Logger?.LogInfo($"QoLiTea: opening folder [{i}] {folder.TrackName}");
             folder.IsOpen = true;
             opened++;
         }
@@ -720,7 +720,7 @@ internal sealed class RandomSongDriver
         try
         {
             Plugin.Logger?.LogInfo(
-                $"TeaQoLs: scrolling visual={visualSteps} tracks={trackSteps} (dir {direction}, budget {targetScrollSeconds:0.00}s, wrap forced)");
+                $"QoLiTea: scrolling visual={visualSteps} tracks={trackSteps} (dir {direction}, budget {targetScrollSeconds:0.00}s, wrap forced)");
 
             for (var i = 0; i < visualSteps; i++)
             {

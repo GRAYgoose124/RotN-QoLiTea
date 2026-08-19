@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>QoLiTea.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <!-- Pure logic only — avoid Unity/BepInEx in the test host. -->
+  <ItemGroup>
+    <Compile Include="..\Features\RandomSong\RandomSongRules.cs" Link="RandomSongRules.cs" />
+    <Compile Include="..\Features\LazyCustomTracks\CacheReconcilePolicy.cs" Link="CacheReconcilePolicy.cs" />
+    <Compile Include="..\Features\LazyCustomTracks\WorkshopDeltaPolicy.cs" Link="WorkshopDeltaPolicy.cs" />
+    <Compile Include="..\Features\LazyCustomTracks\ReconcileKickPolicy.cs" Link="ReconcileKickPolicy.cs" />
+    <Compile Include="..\Features\LazyCustomTracks\ReSortGatePolicy.cs" Link="ReSortGatePolicy.cs" />
+    <Compile Include="..\Features\WorkshopAutoScan\WorkshopAutoScanPolicy.cs" Link="WorkshopAutoScanPolicy.cs" />
+    <Compile Include="..\Features\WorkshopAutoScan\WorkshopDescriptionText.cs" Link="WorkshopDescriptionText.cs" />
+    <Compile Include="..\Features\SkipBootIntro\BootSkipPolicy.cs" Link="BootSkipPolicy.cs" />
+    <Compile Include="..\Features\FieldOpacity\FieldOpacityPolicy.cs" Link="FieldOpacityPolicy.cs" />
+    <Compile Include="..\Features\TrackSets\BulkUnsubPolicy.cs" Link="BulkUnsubPolicy.cs" />
+    <Compile Include="..\Features\TrackSets\NoImpossibleUnsubPolicy.cs" Link="NoImpossibleUnsubPolicy.cs" />
+    <Compile Include="..\Features\TrackSets\TrackSetName.cs" Link="TrackSetName.cs" />
+  </ItemGroup>
+
+</Project>

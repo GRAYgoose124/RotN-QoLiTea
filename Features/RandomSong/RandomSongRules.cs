@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace TeaQoLs.Features.RandomSong;
+namespace QoLiTea.Features.RandomSong;
 
 /// <summary>
 /// Pure random-song pick + scroll pacing (no Unity).

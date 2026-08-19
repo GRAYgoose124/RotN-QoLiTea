@@ -2,7 +2,7 @@ using HarmonyLib;
 using Shared.TrackSelection;
 using UnityEngine.InputSystem;
 
-namespace TeaQoLs.Features.RandomSong;
+namespace QoLiTea.Features.RandomSong;
 
 /// <summary>
 /// Drive random-song from stock title-list Update (same place as remix CycleMode).
@@ -23,7 +23,7 @@ internal static class RandomSongOfficialInputPatch
             _logged = true;
             var kb = Keyboard.current;
             Plugin.Logger?.LogInfo(
-                $"TeaQoLs: official title Update hooked (InputDisabled={__instance.InputDisabled}, Keyboard={(kb != null)})");
+                $"QoLiTea: official title Update hooked (InputDisabled={__instance.InputDisabled}, Keyboard={(kb != null)})");
         }
 
         if (__instance.InputDisabled)
@@ -48,7 +48,7 @@ internal static class RandomSongCustomInputPatch
         {
             _logged = true;
             Plugin.Logger?.LogInfo(
-                $"TeaQoLs: custom title Update hooked (InputDisabled={__instance.InputDisabled})");
+                $"QoLiTea: custom title Update hooked (InputDisabled={__instance.InputDisabled})");
         }
 
         if (__instance.InputDisabled)

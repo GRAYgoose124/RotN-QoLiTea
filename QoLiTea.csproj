@@ -2,10 +2,10 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <AssemblyName>TeaQoLs</AssemblyName>
-    <Product>TeaQoLs</Product>
+    <AssemblyName>QoLiTea</AssemblyName>
+    <Product>QoLiTea</Product>
     <Version>1.0.0</Version>
-    <BepInExPluginGuid>rotn.dimethyltea.TeaQoLs</BepInExPluginGuid>
+    <BepInExPluginGuid>rotn.dimethyltea.QoLiTea</BepInExPluginGuid>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>
@@ -13,7 +13,7 @@
       https://nuget.bepinex.dev/v3/index.json;
       https://nuget.samboy.dev/v3/index.json
     </RestoreAdditionalProjectSources>
-    <RootNamespace>TeaQoLs</RootNamespace>
+    <RootNamespace>QoLiTea</RootNamespace>
     <GameManaged Condition="'$(GameManaged)' == ''">A:\SteamLibrary\steamapps\common\RiftOfTheNecroDancerOSTVolume1\RiftOfTheNecroDancer_Data\Managed</GameManaged>
     <GamePlugins Condition="'$(GamePlugins)' == ''">A:\SteamLibrary\steamapps\common\RiftOfTheNecroDancerOSTVolume1\BepInEx\plugins</GamePlugins>
   </PropertyGroup>
@@ -41,6 +41,26 @@
       <HintPath>$(GameManaged)\Unity.InputSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>$(GameManaged)\Unity.TextMeshPro.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>$(GameManaged)\Newtonsoft.Json.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="com.rlabrecque.steamworks.net">
+      <HintPath>$(GameManaged)\com.rlabrecque.steamworks.net.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UnityWebRequestModule">
+      <HintPath>$(GameManaged)\UnityEngine.UnityWebRequestModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UnityWebRequestTextureModule">
+      <HintPath>$(GameManaged)\UnityEngine.UnityWebRequestTextureModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="RiftOfTheNecroManager">
       <HintPath>$(GamePlugins)\RiftOfTheNecroManager.dll</HintPath>
       <Private>false</Private>
@@ -48,12 +68,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="TeaQoLs.Tests" />
+    <InternalsVisibleTo Include="QoLiTea.Tests" />
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="TeaQoLs.Tests/**" />
-    <None Remove="TeaQoLs.Tests/**" />
+    <Compile Remove="QoLiTea.Tests/**" />
+    <None Remove="QoLiTea.Tests/**" />
   </ItemGroup>
 
 </Project>

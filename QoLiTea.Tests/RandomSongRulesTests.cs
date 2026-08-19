@@ -1,8 +1,8 @@
 using System.Collections.Generic;
-using TeaQoLs.Features.RandomSong;
+using QoLiTea.Features.RandomSong;
 using Xunit;
 
-namespace TeaQoLs.Tests;
+namespace QoLiTea.Tests;
 
 public class RandomSongRulesTests
 {

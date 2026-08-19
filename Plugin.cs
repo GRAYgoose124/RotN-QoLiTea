@@ -3,11 +3,15 @@ using BepInEx.Logging;
 using HarmonyLib;
 using RiftOfTheNecroManager;
 using Shared.TrackSelection;
-using TeaQoLs.Features.RandomSong;
+using QoLiTea.Features.FieldOpacity;
+using QoLiTea.Features.LazyCustomTracks;
+using QoLiTea.Features.RandomSong;
+using QoLiTea.Features.TrackSets;
+using QoLiTea.Features.WorkshopAutoScan;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace TeaQoLs;
+namespace QoLiTea;
 
 [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
 public class Plugin : RiftPlugin
@@ -19,14 +23,127 @@ public class Plugin : RiftPlugin
         "General",
         "Enabled",
         true,
-        "Master toggle for TeaQoLs features.");
+        "Master toggle — all QoLiTea features off when false.");
+
+    internal static readonly Setting<bool> RandomSongEnabled = new(
+        "RandomSong",
+        "RandomSongEnabled",
+        true,
+        "Jukebox random song on the official/custom title list.");
 
     // Not R (remix CycleMode) or F6 (other mods).
     internal static readonly Setting<KeyCode> RandomSongKey = new(
         "RandomSong",
         "RandomKey",
         KeyCode.J,
-        "On the official or custom title list: jukebox-scroll to a random playable song and start (skip loadout).");
+        "Title list: jukebox-scroll to a random playable song and start (skip loadout).");
+
+    internal static readonly Setting<bool> LazyCustomTracksEnabled = new(
+        "LazyCustomTracks",
+        "LazyCustomTracksEnabled",
+        true,
+        "Custom Music: disk cache + background reconcile + select hydrate (was LazyCustomTracks mod).");
+
+    internal static readonly Setting<bool> RunClearTrackListCache = new(
+        "LazyCustomTracks",
+        "RunClearTrackListCache",
+        false,
+        "One-shot: delete track-list-cache.json; reconcile now if Custom Music is open.");
+
+    internal static readonly Setting<bool> WorkshopAutoScanEnabled = new(
+        "WorkshopAutoScan",
+        "WorkshopAutoScanEnabled",
+        true,
+        "Custom Music: show new Workshop publishes since last visit; toggle to subscribe.");
+
+    internal static readonly Setting<bool> SkipBootIntroEnabled = new(
+        "SkipBootIntro",
+        "SkipBootIntroEnabled",
+        true,
+        "Skip splash media, forced boot calibration, intro cinematic, and title screen — real main menu after load.");
+
+    internal static readonly Setting<bool> FieldOpacityEnabled = new(
+        "FieldOpacity",
+        "FieldOpacityEnabled",
+        true,
+        "Scale lane/field tile opacity (0–100). Tiles only — not enemies or strings.");
+
+    // NecroManager Setting<int> does not bind — use string, parse in code.
+    internal static readonly Setting<string> FieldOpacity = new(
+        "FieldOpacity",
+        "FieldOpacity",
+        "100",
+        "Tile opacity percent (0 = invisible, 100 = stock). Takes effect on next stock tile alpha pass.");
+
+    internal static readonly Setting<bool> BulkUnsubscriberEnabled = new(
+        "TrackSets",
+        "BulkUnsubscriberEnabled",
+        true,
+        "Cap-trim and No-Impossible unsub tools (NecroManager one-shots).");
+
+    // NecroManager Setting<int> does not bind — use string, parse in code.
+    internal static readonly Setting<string> MaxSubscribedTracks = new(
+        "TrackSets",
+        "MaxSubscribedTracks",
+        "1000",
+        "Bulk Unsubscriber keeps at most this many workshop subscriptions.");
+
+    internal static readonly Setting<bool> RunBulkUnsubscriber = new(
+        "TrackSets",
+        "RunBulkUnsubscriber",
+        false,
+        "One-shot: open Bulk Unsubscriber confirm (then resets to false).");
+
+    internal static readonly Setting<bool> RunUnsubNoImpossible = new(
+        "TrackSets",
+        "RunUnsubNoImpossible",
+        false,
+        "One-shot: unsub non-favorite tracks lacking Impossible (confirm; resets).");
+
+    internal static readonly Setting<bool> SetSubscriberEnabled = new(
+        "TrackSets",
+        "SetSubscriberEnabled",
+        true,
+        "Set Subscriber: re-subscribe saved unsub sets (additive).");
+
+    internal static readonly Setting<bool> OpenSetSubscriber = new(
+        "TrackSets",
+        "OpenSetSubscriber",
+        false,
+        "One-shot: open Set Subscriber picker (then resets to false).");
+
+    /// <summary>Master + feature gate for Custom Music lazy load.</summary>
+    internal static bool IsLazyCustomTracksActive => Enabled && LazyCustomTracksEnabled;
+
+    /// <summary>Master + feature gate for random song.</summary>
+    internal static bool IsRandomSongActive => Enabled && RandomSongEnabled;
+
+    /// <summary>Master + feature gate for Workshop autoscan overlay.</summary>
+    internal static bool IsWorkshopAutoScanActive => Enabled && WorkshopAutoScanEnabled;
+
+    /// <summary>Master + feature gate for boot splash/intro skip.</summary>
+    internal static bool IsSkipBootIntroActive => Enabled && SkipBootIntroEnabled;
+
+    /// <summary>Master + field tile opacity.</summary>
+    internal static bool IsFieldOpacityActive => Enabled && FieldOpacityEnabled;
+
+    internal static int FieldOpacityPercent => FieldOpacityPolicy.ParsePercent(FieldOpacity.Entry.Value);
+
+    /// <summary>Master + Bulk Unsubscriber / No-Impossible tools.</summary>
+    internal static bool IsBulkUnsubscriberActive => Enabled && BulkUnsubscriberEnabled;
+
+    /// <summary>Master + Set Subscriber.</summary>
+    internal static bool IsSetSubscriberActive => Enabled && SetSubscriberEnabled;
+
+    internal static int MaxSubscribedTracksValue
+    {
+        get
+        {
+            if (!int.TryParse(MaxSubscribedTracks.Entry.Value, out int n) || n < 0)
+                return 1000;
+            return n;
+        }
+    }
 
     private RandomSongDriver _randomSong;
     private bool _ready;
@@ -38,15 +155,20 @@ public class Plugin : RiftPlugin
         Instance = this;
         Logger = base.Logger;
         _randomSong = new RandomSongDriver(this);
+
+        TrackListCache.LoadFromDisk();
+        LiveDeltaService.ResetBaselineFromCache();
+        WorkshopSeenStore.LoadFromDisk();
+        TrackSetStore.LoadFromDisk();
+
+        base.OnInit();
         _ready = true;
 
         var update = AccessTools.Method(typeof(TrackSelectionSceneController), nameof(TrackSelectionSceneController.Update));
         var patchInfo = update != null ? Harmony.GetPatchInfo(update) : null;
         var postfixCount = patchInfo?.Postfixes?.Count ?? 0;
         Logger.LogInfo(
-            $"{MyPluginInfo.PLUGIN_GUID} ready — press {RandomSongKey.Entry.Value} on title list (TrackSelection.Update postfixes={postfixCount})");
-
-        base.OnInit();
+            $"{MyPluginInfo.PLUGIN_GUID} ready — RandomSong={RandomSongEnabled.Entry.Value} key={RandomSongKey.Entry.Value}; LazyCustomTracks={LazyCustomTracksEnabled.Entry.Value}; WorkshopAutoScan={WorkshopAutoScanEnabled.Entry.Value}; SkipBootIntro={SkipBootIntroEnabled.Entry.Value}; FieldOpacity={FieldOpacityEnabled.Entry.Value}/{FieldOpacityPercent}; TrackSets cap={MaxSubscribedTracksValue} (TrackSelection.Update postfixes={postfixCount})");
     }
 
     protected override void OnUnload()
@@ -62,7 +184,7 @@ public class Plugin : RiftPlugin
     /// </summary>
     internal void TryRandomSongFromTitleList()
     {
-        if (!_ready || _randomSong == null || !Enabled)
+        if (!_ready || _randomSong == null || !IsRandomSongActive)
             return;
 
         if (_randomSong.IsRunning)
@@ -75,18 +197,18 @@ public class Plugin : RiftPlugin
         if (!pressed)
             return;
 
-        Logger.LogInfo($"TeaQoLs: {keyCode} edge detected");
+        Logger.LogInfo($"QoLiTea: {keyCode} edge detected");
 
         if (TrackListGate.TryGetCustom(out var custom))
         {
             if (custom.InputDisabled)
             {
-                Logger.LogWarning("TeaQoLs: custom list InputDisabled; ignoring.");
+                Logger.LogWarning("QoLiTea: custom list InputDisabled; ignoring.");
                 return;
             }
 
             if (!_randomSong.TryStartCustom(custom))
-                Logger.LogWarning("TeaQoLs: custom random could not start.");
+                Logger.LogWarning("QoLiTea: custom random could not start.");
             return;
         }
 
@@ -94,19 +216,19 @@ public class Plugin : RiftPlugin
         {
             if (official.InputDisabled)
             {
-                Logger.LogWarning("TeaQoLs: official list InputDisabled; ignoring.");
+                Logger.LogWarning("QoLiTea: official list InputDisabled; ignoring.");
                 return;
             }
 
             if (!_randomSong.TryStartOfficial(official))
-                Logger.LogWarning("TeaQoLs: official random could not start.");
+                Logger.LogWarning("QoLiTea: official random could not start.");
             return;
         }
 
         if (Time.unscaledTime >= _nextMissLogTime)
         {
             _nextMissLogTime = Time.unscaledTime + 2f;
-            Logger.LogWarning("TeaQoLs: J ignored (no active title list).");
+            Logger.LogWarning("QoLiTea: J ignored (no active title list).");
         }
     }
 
@@ -114,6 +236,11 @@ public class Plugin : RiftPlugin
     {
         // Backup path if Harmony title-list patches miss.
         TryRandomSongFromTitleList();
+        if (_ready)
+        {
+            TrackSetsOneShot.Tick();
+            LazyCustomTracksOneShot.Tick();
+        }
     }
 
     private static bool IsKeyDown(KeyCode keyCode)
