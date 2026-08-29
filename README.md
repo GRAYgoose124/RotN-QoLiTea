@@ -57,6 +57,14 @@ NecroManager one-shots under **TrackSets**.
 
 **Set Subscriber** (`OpenSetSubscriber`): multi-select saved sets; Enter subscribes the union (additive only). Sets file: `BepInEx/config/rotn.dimethyltea.QoLiTea/track-sets.json`. Updates the Lazy Custom Tracks cache from Steam after unsub/subscribe.
 
+### Results divergence plot
+
+On the **results screen**, draws a scatter plot of signed timing divergence from on-beat perfect (center line = perfect; early/late above/below), using stock rating-percent language. Shaded bands mark detected worst sections. Full width along the bottom of the results canvas (same height band as before). Default **80%** opacity (**20%** transparent); tune via `PlotOpacity`. Press **G** (configurable) on the results screen to toggle the plot on/off without leaving results. Does not replace the stock results histogram.
+
+### Practice worst sections
+
+When worst sections are found and stock Practice is available, adds an **Auto** results menu option (registered in the scrollable option list, after Retry). One stock practice window from the **start of the first** worst section through the **end of the last**. At each section boundary, mid-run **FMOD seek + chart skip** with 8-beat warm-up prep and enemy clear (no full scene reload between sections). After the last section, stock `CompleteStage` runs normally.
+
 ## Settings
 
 | Key | Default | Meaning |
@@ -68,7 +76,7 @@ NecroManager one-shots under **TrackSets**.
 | **RunClearTrackListCache** | false | One-shot: clear track list cache. |
 | **WorkshopAutoScanEnabled** | true | Custom Music: new Workshop publish overlay. |
 | **SkipBootIntroEnabled** | true | Skip splash media / forced boot calib / intro cinematic / title screen. |
-| **FieldOpacityEnabled** | true | Scale lane/field tile opacity. |
+| **FieldOpacityEnabled** | false | Scale lane/field tile opacity. |
 | **FieldOpacity** | 100 | Tile opacity percent (`0` = invisible, `100` = stock). |
 | **BulkUnsubscriberEnabled** | true | Cap-trim + No-Impossible unsub tools. |
 | **MaxSubscribedTracks** | 1000 | Bulk Unsubscriber subscription cap. |
@@ -76,6 +84,10 @@ NecroManager one-shots under **TrackSets**.
 | **RunUnsubNoImpossible** | false | One-shot: unsub tracks without Impossible. |
 | **SetSubscriberEnabled** | true | Set Subscriber picker. |
 | **OpenSetSubscriber** | false | One-shot: open Set Subscriber. |
+| **ResultsDivergencePlotEnabled** | true | Results scatter plot of timing divergence. |
+| **ToggleKey** | G | Results screen: toggle plot visibility. |
+| **PlotOpacity** | 90 | Plot opacity percent (`80` = 20% transparent). |
+| **WorstSectionPracticeEnabled** | true | Detect spans + Auto button / jumper. |
 
 Also available under NecroManager’s in-game Mods settings menu.
 

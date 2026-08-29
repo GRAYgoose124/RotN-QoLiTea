@@ -32,6 +32,17 @@
     <Compile Include="..\Features\TrackSets\BulkUnsubPolicy.cs" Link="BulkUnsubPolicy.cs" />
     <Compile Include="..\Features\TrackSets\NoImpossibleUnsubPolicy.cs" Link="NoImpossibleUnsubPolicy.cs" />
     <Compile Include="..\Features\TrackSets\TrackSetName.cs" Link="TrackSetName.cs" />
+    <Compile Include="..\Features\ResultsDivergence\SignedDivergenceRules.cs" Link="SignedDivergenceRules.cs" />
+    <Compile Include="..\Features\ResultsDivergence\PlotHitRating.cs" Link="PlotHitRating.cs" />
+    <Compile Include="..\Features\ResultsDivergence\HitDivergenceSample.cs" Link="HitDivergenceSample.cs" />
+    <Compile Include="..\Features\ResultsDivergence\PracticeSpan.cs" Link="PracticeSpan.cs" />
+    <Compile Include="..\Features\ResultsDivergence\WorstSectionDetector.cs" Link="WorstSectionDetector.cs" />
+    <Compile Include="..\Features\ResultsDivergence\DivergencePlotLayout.cs" Link="DivergencePlotLayout.cs" />
+    <Compile Include="..\Features\ResultsDivergence\RunHitHarvest.cs" Link="RunHitHarvest.cs" />
+    <Compile Include="..\Features\ResultsDivergence\ResultsDivergencePolicy.cs" Link="ResultsDivergencePolicy.cs" />
+    <Compile Include="..\Features\WorstSectionPractice\WorstSectionPracticePolicy.cs" Link="WorstSectionPracticePolicy.cs" />
+    <Compile Include="..\Features\WorstSectionPractice\PracticeSectionBeatMath.cs" Link="PracticeSectionBeatMath.cs" />
+    <Compile Include="..\Features\WorstSectionPractice\PracticeSectionEnemyCull.cs" Link="PracticeSectionEnemyCull.cs" />
   </ItemGroup>
 
 </Project>

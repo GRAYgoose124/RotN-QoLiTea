@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>QoLiTea</AssemblyName>
     <Product>QoLiTea</Product>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <BepInExPluginGuid>rotn.dimethyltea.QoLiTea</BepInExPluginGuid>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
@@ -43,6 +43,10 @@
     </Reference>
     <Reference Include="Unity.TextMeshPro">
       <HintPath>$(GameManaged)\Unity.TextMeshPro.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="TicToc.ObjectPooling.Runtime">
+      <HintPath>$(GameManaged)\TicToc.ObjectPooling.Runtime.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json">

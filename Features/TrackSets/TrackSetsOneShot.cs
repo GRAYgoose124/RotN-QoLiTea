@@ -51,19 +51,19 @@ public static class TrackSetsOneShot
             return;
         }
 
-        if (bulk && !_bulkPrev)
+        if (bulk && !_bulkPrev && Plugin.IsBulkUnsubscriberActive)
         {
             Plugin.RunBulkUnsubscriber.Entry.Value = false;
             BulkUnsubController.TryRunFromSetting();
         }
 
-        if (noImp && !_noImpPrev)
+        if (noImp && !_noImpPrev && Plugin.IsBulkUnsubscriberActive)
         {
             Plugin.RunUnsubNoImpossible.Entry.Value = false;
             BulkUnsubController.TryRunNoImpossibleFromSetting();
         }
 
-        if (setSub && !_setSubPrev)
+        if (setSub && !_setSubPrev && Plugin.IsSetSubscriberActive)
         {
             Plugin.OpenSetSubscriber.Entry.Value = false;
             SetSubscriberController.TryOpenFromSetting();

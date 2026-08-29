@@ -6,6 +6,7 @@ using Shared.TrackSelection;
 using QoLiTea.Features.FieldOpacity;
 using QoLiTea.Features.LazyCustomTracks;
 using QoLiTea.Features.RandomSong;
+using QoLiTea.Features.ResultsDivergence;
 using QoLiTea.Features.TrackSets;
 using QoLiTea.Features.WorkshopAutoScan;
 using UnityEngine;
@@ -65,7 +66,7 @@ public class Plugin : RiftPlugin
     internal static readonly Setting<bool> FieldOpacityEnabled = new(
         "FieldOpacity",
         "FieldOpacityEnabled",
-        true,
+        false,
         "Scale lane/field tile opacity (0–100). Tiles only — not enemies or strings.");
 
     // NecroManager Setting<int> does not bind — use string, parse in code.
@@ -112,6 +113,31 @@ public class Plugin : RiftPlugin
         false,
         "One-shot: open Set Subscriber picker (then resets to false).");
 
+    internal static readonly Setting<bool> ResultsDivergencePlotEnabled = new(
+        "ResultsDivergence",
+        "ResultsDivergencePlotEnabled",
+        true,
+        "Results screen: scatter plot of timing divergence from perfect.");
+
+    internal static readonly Setting<KeyCode> ResultsDivergenceToggleKey = new(
+        "ResultsDivergence",
+        "ToggleKey",
+        KeyCode.G,
+        "Results screen: toggle divergence plot visibility.");
+
+    // NecroManager Setting<int> does not bind — use string, parse in code.
+    internal static readonly Setting<string> ResultsDivergencePlotOpacity = new(
+        "ResultsDivergence",
+        "PlotOpacity",
+        "90",
+        "Plot opacity percent (80 = 20% transparent, 100 = opaque).");
+
+    internal static readonly Setting<bool> WorstSectionPracticeEnabled = new(
+        "WorstSectionPractice",
+        "WorstSectionPracticeEnabled",
+        false,
+        "Results screen: practice worst sections in chart order (stock practice + mid-run jumps).");
+
     /// <summary>Master + feature gate for Custom Music lazy load.</summary>
     internal static bool IsLazyCustomTracksActive => Enabled && LazyCustomTracksEnabled;
 
@@ -134,6 +160,19 @@ public class Plugin : RiftPlugin
 
     /// <summary>Master + Set Subscriber.</summary>
     internal static bool IsSetSubscriberActive => Enabled && SetSubscriberEnabled;
+
+    /// <summary>Master + results divergence harvest (plot and/or worst-section practice).</summary>
+    internal static bool IsResultsDivergenceHarvestActive =>
+        Enabled && (ResultsDivergencePlotEnabled || WorstSectionPracticeEnabled);
+
+    /// <summary>Master + results divergence plot.</summary>
+    internal static bool IsResultsDivergencePlotActive => Enabled && ResultsDivergencePlotEnabled;
+
+    /// <summary>Master + worst-section Auto practice.</summary>
+    internal static bool IsWorstSectionPracticeActive => Enabled && WorstSectionPracticeEnabled;
+
+    internal static int ResultsDivergencePlotOpacityPercent =>
+        ResultsDivergencePolicy.ParsePlotOpacityPercent(ResultsDivergencePlotOpacity.Entry.Value);
 
     internal static int MaxSubscribedTracksValue
     {
@@ -168,7 +207,7 @@ public class Plugin : RiftPlugin
         var patchInfo = update != null ? Harmony.GetPatchInfo(update) : null;
         var postfixCount = patchInfo?.Postfixes?.Count ?? 0;
         Logger.LogInfo(
-            $"{MyPluginInfo.PLUGIN_GUID} ready — RandomSong={RandomSongEnabled.Entry.Value} key={RandomSongKey.Entry.Value}; LazyCustomTracks={LazyCustomTracksEnabled.Entry.Value}; WorkshopAutoScan={WorkshopAutoScanEnabled.Entry.Value}; SkipBootIntro={SkipBootIntroEnabled.Entry.Value}; FieldOpacity={FieldOpacityEnabled.Entry.Value}/{FieldOpacityPercent}; TrackSets cap={MaxSubscribedTracksValue} (TrackSelection.Update postfixes={postfixCount})");
+            $"{MyPluginInfo.PLUGIN_GUID} ready — RandomSong={RandomSongEnabled.Entry.Value} key={RandomSongKey.Entry.Value}; LazyCustomTracks={LazyCustomTracksEnabled.Entry.Value}; WorkshopAutoScan={WorkshopAutoScanEnabled.Entry.Value}; SkipBootIntro={SkipBootIntroEnabled.Entry.Value}; FieldOpacity={FieldOpacityEnabled.Entry.Value}/{FieldOpacityPercent}; TrackSets cap={MaxSubscribedTracksValue}; DivergencePlot={ResultsDivergencePlotEnabled.Entry.Value} key={ResultsDivergenceToggleKey.Entry.Value} opacity={ResultsDivergencePlotOpacityPercent}; WorstPractice={WorstSectionPracticeEnabled.Entry.Value} (TrackSelection.Update postfixes={postfixCount})");
     }
 
     protected override void OnUnload()
@@ -251,6 +290,8 @@ public class Plugin : RiftPlugin
             // Explicit letter keys — enum arithmetic has been flaky across InputSystem versions.
             if (keyCode == KeyCode.J && keyboard.jKey.isPressed)
                 return true;
+            if (keyCode == KeyCode.G && keyboard.gKey.isPressed)
+                return true;
 
             if (TryToInputKey(keyCode, out var key))
             {
@@ -272,6 +313,14 @@ public class Plugin : RiftPlugin
 
         var legacy = UnityInput.Current;
         return legacy != null && legacy.GetKey(keyCode);
+    }
+
+    internal static bool TryConsumeKeyEdge(ref bool held, KeyCode keyCode)
+    {
+        bool down = IsKeyDown(keyCode);
+        bool pressed = down && !held;
+        held = down;
+        return pressed;
     }
 
     private static bool TryToInputKey(KeyCode keyCode, out Key key)
