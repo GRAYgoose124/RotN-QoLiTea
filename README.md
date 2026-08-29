@@ -59,7 +59,7 @@ NecroManager one-shots under **TrackSets**.
 
 ### Results divergence plot
 
-On the **results screen**, draws a scatter plot of signed timing divergence from on-beat perfect (center line = perfect; early/late above/below), using stock rating-percent language. Shaded bands mark detected worst sections. Full width along the bottom of the results canvas (same height band as before). Default **80%** opacity (**20%** transparent); tune via `PlotOpacity`. Press **G** (configurable) on the results screen to toggle the plot on/off without leaving results. Does not replace the stock results histogram.
+On the **results screen**, draws a scatter plot of signed timing divergence from on-beat perfect (center line = perfect; **E** top / **L** bottom mark early vs late). Gold bands mark **activated vibe-power** windows (not chart vibe monsters). Super-crit hits are gold dots. Overhit combo breaks are vertical beat lines. Full width along the bottom by default; **double-tap G** for opaque fullscreen (timing-bin guide lines + gold super-crit bin); **G** or **Esc** closes. Default **90%** docked opacity via `PlotOpacity`. Does not replace the stock results histogram.
 
 ### Practice worst sections
 

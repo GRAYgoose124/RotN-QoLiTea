@@ -7,7 +7,9 @@ internal static class DivergenceLiveHarvest
     internal static void TryAppend(
         float targetBeat,
         float signed,
-        PlotHitRating rating)
+        PlotHitRating rating,
+        float ratingPercent = 0f,
+        PlotMarkerKind marker = PlotMarkerKind.Dot)
     {
         if (!ResultsDivergencePolicy.ShouldHarvest(
                 Plugin.Enabled,
@@ -15,7 +17,18 @@ internal static class DivergenceLiveHarvest
                 Plugin.WorstSectionPracticeEnabled))
             return;
 
-        RunSessionStore.AppendLive(new HitDivergenceSample(targetBeat, signed, rating));
+        bool isSuperCrit = DivergenceRatingRules.IsSuperCrit(
+            rating,
+            ratingPercent,
+            RunSessionStore.TruePerfectMinimum);
+
+        RunSessionStore.AppendLive(new HitDivergenceSample(
+            targetBeat,
+            signed,
+            rating,
+            ratingPercent,
+            marker,
+            isSuperCrit));
     }
 
     internal static void TryAppendFailure(
@@ -31,13 +44,16 @@ internal static class DivergenceLiveHarvest
             wasEarly,
             inputBeat,
             targetBeatForTiming);
-        TryAppend(targetBeat, signed, rating);
+        TryAppend(targetBeat, signed, rating, ratingPercent);
     }
 
     internal static void TryAppendOverhit(float inputBeat)
     {
-        // No note target — plot at press time, max early extent.
-        TryAppend(inputBeat, -100f, PlotHitRating.Miss);
+        TryAppend(
+            inputBeat,
+            0f,
+            PlotHitRating.ComboBreak,
+            marker: PlotMarkerKind.VerticalLine);
     }
 
     internal static void TryAppendRecordInput(
@@ -66,6 +82,6 @@ internal static class DivergenceLiveHarvest
                 targetBeatNumber)
             : SignedDivergenceRules.Compute(ratingPercent, inputBeatNumber < targetBeatNumber);
 
-        TryAppend(targetBeatNumber, signed, plotRating);
+        TryAppend(targetBeatNumber, signed, plotRating, ratingPercent);
     }
 }

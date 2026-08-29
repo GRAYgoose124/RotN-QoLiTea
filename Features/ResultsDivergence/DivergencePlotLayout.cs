@@ -18,7 +18,10 @@ public static class DivergencePlotLayout
     }
 
     public static (float x0, float x1) SpanBandX(PracticeSpan span, float totalBeats)
-        => (BeatToX(span.StartBeat, totalBeats), BeatToX(span.EndBeat, totalBeats));
+        => SpanBandX(span.StartBeat, span.EndBeat, totalBeats);
+
+    public static (float x0, float x1) SpanBandX(float startBeat, float endBeat, float totalBeats)
+        => (BeatToX(startBeat, totalBeats), BeatToX(endBeat, totalBeats));
 
     private static float Clamp01(float v)
         => v < 0f ? 0f : (v > 1f ? 1f : v);

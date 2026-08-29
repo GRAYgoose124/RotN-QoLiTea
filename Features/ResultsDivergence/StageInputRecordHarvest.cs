@@ -12,13 +12,13 @@ internal static class StageInputRecordHarvest
         if (record?._inputResponsesInChronologicalOrder == null)
             return Array.Empty<HitDivergenceSample>();
 
+        int truePerfectMin = DivergenceTimingBinsHarvest.ReadTruePerfectMinimum(record._inputRatingsDefinition);
         var rawById = record._rawInputDataByGuid;
         var list = new List<HitDivergenceSample>(record._inputResponsesInChronologicalOrder.Count);
 
         foreach (var response in record._inputResponsesInChronologicalOrder)
         {
             bool isMiss = response.rating == InputRating.Miss || !response.success;
-            // Timeout / enemy-hit misses use wasPlayerInput=false and have no raw row.
             if (!response.wasPlayerInput && !isMiss)
                 continue;
 
@@ -34,13 +34,18 @@ internal static class StageInputRecordHarvest
                 hasBeat = true;
             }
 
-            // Without a beat we cannot place the dot — live RecordInput postfix covers these.
-            if (!hasBeat && !response.wasPlayerInput)
-                continue;
-
             PlotHitRating plotRating = DivergencePlotColors.FromInputRating(
                 isMiss ? InputRating.Miss : response.rating,
                 response.wasPlayerInput);
+
+            if (!hasBeat && plotRating == PlotHitRating.ComboBreak && response.wasPlayerInput)
+            {
+                // Errant overhit — vertical line at best-known beat (live harvest usually has this).
+                continue;
+            }
+
+            if (!hasBeat && !response.wasPlayerInput)
+                continue;
 
             float signed = plotRating == PlotHitRating.Miss || plotRating == PlotHitRating.ComboBreak
                 ? SignedDivergenceRules.ForFailure(
@@ -50,7 +55,18 @@ internal static class StageInputRecordHarvest
                     targetBeat)
                 : SignedDivergenceRules.Compute(response.ratingPercent, response.wasEarly);
 
-            list.Add(new HitDivergenceSample(targetBeat, signed, plotRating));
+            bool isSuperCrit = DivergenceRatingRules.IsSuperCrit(
+                plotRating,
+                response.ratingPercent,
+                truePerfectMin);
+
+            list.Add(new HitDivergenceSample(
+                targetBeat,
+                signed,
+                plotRating,
+                response.ratingPercent,
+                PlotMarkerKind.Dot,
+                isSuperCrit));
         }
 
         return list;

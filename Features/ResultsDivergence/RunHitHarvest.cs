@@ -54,7 +54,8 @@ public static class RunHitHarvest
                     row.TargetBeat)
                 : SignedDivergenceRules.Compute(row.RatingPercent, row.WasEarly);
 
-            list.Add(new HitDivergenceSample(row.Beat, signed, row.Rating));
+            bool isSuperCrit = DivergenceRatingRules.IsSuperCrit(row.Rating, row.RatingPercent, 90);
+            list.Add(new HitDivergenceSample(row.Beat, signed, row.Rating, row.RatingPercent, PlotMarkerKind.Dot, isSuperCrit));
         }
 
         return list;

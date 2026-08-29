@@ -293,6 +293,18 @@ public class Plugin : RiftPlugin
             if (keyCode == KeyCode.G && keyboard.gKey.isPressed)
                 return true;
 
+            if (keyCode == KeyCode.Escape && keyboard.escapeKey.isPressed)
+                return true;
+
+            if ((keyCode == KeyCode.Plus || keyCode == KeyCode.Equals) && keyboard.equalsKey.isPressed)
+                return true;
+            if (keyCode == KeyCode.KeypadPlus && keyboard.numpadPlusKey.isPressed)
+                return true;
+            if ((keyCode == KeyCode.Minus) && keyboard.minusKey.isPressed)
+                return true;
+            if (keyCode == KeyCode.KeypadMinus && keyboard.numpadMinusKey.isPressed)
+                return true;
+
             if (TryToInputKey(keyCode, out var key))
             {
                 var control = keyboard[key];
@@ -318,6 +330,26 @@ public class Plugin : RiftPlugin
     internal static bool TryConsumeKeyEdge(ref bool held, KeyCode keyCode)
     {
         bool down = IsKeyDown(keyCode);
+        bool pressed = down && !held;
+        held = down;
+        return pressed;
+    }
+
+    internal static bool TryConsumeAnyKeyEdge(ref bool held, params KeyCode[] keyCodes)
+    {
+        bool down = false;
+        if (keyCodes != null)
+        {
+            foreach (var keyCode in keyCodes)
+            {
+                if (IsKeyDown(keyCode))
+                {
+                    down = true;
+                    break;
+                }
+            }
+        }
+
         bool pressed = down && !held;
         held = down;
         return pressed;

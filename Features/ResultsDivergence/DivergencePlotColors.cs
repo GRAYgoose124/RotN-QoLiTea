@@ -18,25 +18,37 @@ internal static class DivergencePlotColors
     internal static readonly Color Ok = new(1f, 1f, 1f, 1f);
     internal static readonly Color Miss = new(0.96f, 0.1f, 0.19f, 1f);
     internal static readonly Color ComboBreak = new(1f, 0.45f, 0.5f, 1f);
+    internal static readonly Color SuperCrit = new(1f, 0.84f, 0f, 1f);
     internal static readonly Color CenterLine = new(1f, 1f, 1f, 0.55f);
+    internal static readonly Color CenterLineFullscreen = new(1f, 1f, 1f, 1f);
     internal static readonly Color SpanBand = new(0.96f, 0.42f, 0.61f, 0.28f);
+    internal static readonly Color VibeBand = new(1f, 0.84f, 0f, 0.28f);
+    internal static readonly Color SuperCritBinLine = new(1f, 0.84f, 0f, 0.45f);
+    internal static readonly Color SuperCritBinLineFullscreen = new(1f, 0.84f, 0f, 1f);
+    internal static readonly Color BackgroundFullscreen = new(0.05f, 0.05f, 0.08f, 1f);
+    internal static readonly Color TimingBinLine = new(1f, 1f, 1f, 0.18f);
+    internal static readonly Color TimingBinLineFullscreen = new(0.62f, 0.62f, 0.66f, 1f);
+    internal static readonly Color AxisLabel = new(1f, 1f, 1f, 0.85f);
     internal static readonly Color Background = new(0.05f, 0.05f, 0.08f, 0.75f);
 
-    internal static Color ForRating(PlotHitRating rating, AccuracyBar stockBar = null)
+    internal static Color ForHit(HitDivergenceSample hit, AccuracyBar stockBar = null)
     {
-        if (rating == PlotHitRating.Miss)
+        if (hit.IsSuperCrit)
+            return SuperCrit;
+
+        if (hit.Rating == PlotHitRating.Miss)
             return Miss;
-        if (rating == PlotHitRating.ComboBreak)
+        if (hit.Rating == PlotHitRating.ComboBreak)
             return ComboBreak;
 
         if (stockBar != null)
         {
-            var mapped = ToInputRating(rating);
+            var mapped = ToInputRating(hit.Rating);
             if (mapped.HasValue)
                 return stockBar.GetInputColor(mapped.Value);
         }
 
-        return rating switch
+        return hit.Rating switch
         {
             PlotHitRating.Perfect => Perfect,
             PlotHitRating.Great => Great,
@@ -45,6 +57,9 @@ internal static class DivergencePlotColors
             _ => Miss,
         };
     }
+
+    internal static Color ForRating(PlotHitRating rating, AccuracyBar stockBar = null)
+        => ForHit(new HitDivergenceSample(0f, 0f, rating), stockBar);
 
     internal static PlotHitRating FromInputRating(InputRating rating, bool wasPlayerInput)
     {

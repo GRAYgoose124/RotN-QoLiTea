@@ -24,7 +24,10 @@ internal static class ResultsDivergencePatches
                 Plugin.ResultsDivergencePlotEnabled,
                 Plugin.WorstSectionPracticeEnabled))
             return;
-        RunSessionStore.BeginStage();
+        var stage = UnityEngine.Object.FindObjectOfType<RRStageController>();
+        int truePerfectMin = DivergenceTimingBinsHarvest.ReadTruePerfectMinimum(
+            stage?._stageInputRecord?._inputRatingsDefinition);
+        RunSessionStore.BeginStage(truePerfectMin);
     }
 
     [HarmonyPostfix]
@@ -96,6 +99,48 @@ internal static class ResultsDivergencePatches
     }
 
     [HarmonyPostfix]
+    [HarmonyPatch(typeof(StageInputRecord), nameof(StageInputRecord.VibePowerActivated))]
+    private static void VibePowerActivatedPostfix(float currentTime, float currentBeatNumber)
+    {
+        try
+        {
+            if (!ResultsDivergencePolicy.ShouldHarvest(
+                    Plugin.Enabled,
+                    Plugin.ResultsDivergencePlotEnabled,
+                    Plugin.WorstSectionPracticeEnabled))
+                return;
+            RunSessionStore.OnVibeActivated(currentBeatNumber);
+        }
+        catch (Exception ex)
+        {
+            Plugin.Logger?.LogWarning($"ResultsDivergence VibePowerActivated failed: {ex.Message}");
+        }
+    }
+
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(StageInputRecord), nameof(StageInputRecord.VibePowerDeactivated))]
+    private static void VibePowerDeactivatedPostfix()
+    {
+        try
+        {
+            if (!ResultsDivergencePolicy.ShouldHarvest(
+                    Plugin.Enabled,
+                    Plugin.ResultsDivergencePlotEnabled,
+                    Plugin.WorstSectionPracticeEnabled))
+                return;
+
+            var stage = UnityEngine.Object.FindObjectOfType<RRStageController>();
+            float beat = stage?.BeatmapPlayer?.FmodTimeCapsule.TrueBeatNumber ?? 0f;
+            if (beat > 0f)
+                RunSessionStore.OnVibeDeactivated(beat);
+        }
+        catch (Exception ex)
+        {
+            Plugin.Logger?.LogWarning($"ResultsDivergence VibePowerDeactivated failed: {ex.Message}");
+        }
+    }
+
+    [HarmonyPostfix]
     [HarmonyPatch(typeof(ScoreResultsView), nameof(ScoreResultsView.Show))]
     private static void ShowPostfix(ScoreResultsView __instance)
     {
@@ -139,13 +184,12 @@ internal static class ResultsDivergencePatches
         }
 
         float totalBeats = GuessTotalBeats(stage, hits);
+        RunSessionStore.CloseOpenVibeAt(totalBeats);
 
         RunSessionStore.LastHits = hits;
         RunSessionStore.LastTotalBeats = totalBeats;
 
-        IReadOnlyList<PracticeSpan> spans = Array.Empty<PracticeSpan>();
-        if (Plugin.IsWorstSectionPracticeActive)
-            spans = WorstSectionDetector.Detect(hits);
+        var spans = WorstSectionDetector.Detect(hits);
 
         bool showPlot = ResultsDivergencePolicy.ShouldShowPlot(
             Plugin.Enabled,
@@ -154,14 +198,23 @@ internal static class ResultsDivergencePatches
         if (showPlot)
         {
             Transform plotParent = view.transform.Find("Content") ?? view.transform;
-            var raw = DivergencePlotRenderer.Build(
-                plotParent,
+            var ratings = view._accuracyBar?._ratingsDefinition
+                ?? stage?._stageInputRecord?._inputRatingsDefinition;
+            int truePerfectMin = DivergenceTimingBinsHarvest.ReadTruePerfectMinimum(ratings);
+            var context = new PlotRenderContext(
                 hits,
                 spans,
+                VibeActivationHarvest.FromRecord(stage?._stageInputRecord, totalBeats),
                 totalBeats,
                 Plugin.ResultsDivergencePlotOpacityPercent,
+                DivergenceTimingBinsHarvest.FromRatings(ratings),
+                DivergenceTimingBins.SuperCritMagnitude(truePerfectMin),
                 view._accuracyBar);
-            DivergencePlotSession.Register(raw, Plugin.ResultsDivergencePlotOpacityPercent);
+            var raw = DivergencePlotRenderer.Build(
+                plotParent,
+                context,
+                PlotDisplayMode.Docked);
+            DivergencePlotSession.Register(raw, context);
         }
         else
         {

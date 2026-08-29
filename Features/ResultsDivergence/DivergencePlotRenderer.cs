@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using RhythmRift;
+using Shared;
+using Shared.RhythmEngine;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -7,23 +9,19 @@ namespace QoLiTea.Features.ResultsDivergence;
 
 internal static class DivergencePlotRenderer
 {
-    private const int TexW = 512;
-    private const int TexH = 128;
     private const string RootName = "QoLiTeaDivergencePlot";
 
-    /// <summary>Full width, docked to bottom and sides; same vertical band as the old centered plot.</summary>
-    private static readonly Vector2 AnchorMin = new(0f, 0.02f);
-    private static readonly Vector2 AnchorMax = new(1f, 0.27f);
+    private static readonly Vector2 DockedAnchorMin = new(0f, 0.02f);
+    private static readonly Vector2 DockedAnchorMax = new(1f, 0.27f);
+    private static readonly Vector2 FullscreenAnchorMin = Vector2.zero;
+    private static readonly Vector2 FullscreenAnchorMax = Vector2.one;
 
     internal static RawImage Build(
         Transform parent,
-        IReadOnlyList<HitDivergenceSample> hits,
-        IReadOnlyList<PracticeSpan> spans,
-        float totalBeats,
-        int opacityPercent,
-        AccuracyBar stockColorSource = null)
+        PlotRenderContext context,
+        PlotDisplayMode mode)
     {
-        if (parent == null)
+        if (parent == null || context == null)
             return null;
 
         var existing = parent.Find(RootName);
@@ -32,18 +30,48 @@ internal static class DivergencePlotRenderer
 
         var go = new GameObject(RootName, typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage));
         go.transform.SetParent(parent, false);
-        var rt = (RectTransform)go.transform;
-        rt.anchorMin = AnchorMin;
-        rt.anchorMax = AnchorMax;
+        ApplyLayout(go, mode);
+
+        var raw = go.GetComponent<RawImage>();
+        bool fullscreen = mode == PlotDisplayMode.Fullscreen;
+        raw.texture = RenderTexture(context, fullscreen);
+        raw.raycastTarget = false;
+        ApplyOpacity(raw, context.OpacityPercent);
+        return raw;
+    }
+
+    internal static void ApplyLayout(GameObject plotGo, PlotDisplayMode mode)
+    {
+        if (plotGo == null)
+            return;
+
+        var rt = plotGo.GetComponent<RectTransform>();
+        if (mode == PlotDisplayMode.Fullscreen)
+        {
+            rt.anchorMin = FullscreenAnchorMin;
+            rt.anchorMax = FullscreenAnchorMax;
+        }
+        else
+        {
+            rt.anchorMin = DockedAnchorMin;
+            rt.anchorMax = DockedAnchorMax;
+        }
+
         rt.offsetMin = Vector2.zero;
         rt.offsetMax = Vector2.zero;
         rt.SetAsLastSibling();
+    }
 
-        var raw = go.GetComponent<RawImage>();
-        raw.texture = RenderTexture(hits, spans, totalBeats, stockColorSource);
-        raw.raycastTarget = false;
-        ApplyOpacity(raw, opacityPercent);
-        return raw;
+    internal static void RefreshTexture(RawImage raw, PlotRenderContext context, PlotDisplayMode mode)
+    {
+        if (raw == null || context == null)
+            return;
+
+        bool fullscreen = mode == PlotDisplayMode.Fullscreen;
+        var old = raw.texture;
+        raw.texture = RenderTexture(context, fullscreen);
+        if (old != null)
+            Object.Destroy(old);
     }
 
     internal static void ApplyOpacity(RawImage raw, int opacityPercent)
@@ -57,57 +85,55 @@ internal static class DivergencePlotRenderer
         raw.color = c;
     }
 
-    private static Texture2D RenderTexture(
-        IReadOnlyList<HitDivergenceSample> hits,
-        IReadOnlyList<PracticeSpan> spans,
-        float totalBeats,
-        AccuracyBar stockColorSource)
+    private static Texture2D RenderTexture(PlotRenderContext context, bool fullscreen)
     {
-        var tex = new Texture2D(TexW, TexH, TextureFormat.RGBA32, false)
+        int texW = fullscreen ? 1024 : 512;
+        int texH = fullscreen ? 512 : 128;
+
+        var tex = new Texture2D(texW, texH, TextureFormat.RGBA32, false)
         {
-            filterMode = FilterMode.Bilinear,
+            filterMode = fullscreen ? FilterMode.Point : FilterMode.Bilinear,
             wrapMode = TextureWrapMode.Clamp,
-            name = "QoLiTeaDivergencePlotTex",
+            name = fullscreen ? "QoLiTeaDivergencePlotTexFull" : "QoLiTeaDivergencePlotTex",
         };
 
-        var pixels = new Color[TexW * TexH];
+        var pixels = new Color[texW * texH];
+        Color bg = fullscreen ? DivergencePlotColors.BackgroundFullscreen : DivergencePlotColors.Background;
         for (int i = 0; i < pixels.Length; i++)
-            pixels[i] = DivergencePlotColors.Background;
+            pixels[i] = bg;
 
-        if (spans != null)
+        DrawSpanBands(pixels, texW, texH, context.VibeSpans, context.TotalBeats, DivergencePlotColors.VibeBand);
+        DrawSpanBands(pixels, texW, texH, context.WorstSpans, context.TotalBeats, DivergencePlotColors.SpanBand);
+
+        if (fullscreen)
         {
-            foreach (var span in spans)
-            {
-                var (x0, x1) = DivergencePlotLayout.SpanBandX(span, totalBeats);
-                int px0 = Mathf.Clamp(Mathf.FloorToInt(x0 * (TexW - 1)), 0, TexW - 1);
-                int px1 = Mathf.Clamp(Mathf.CeilToInt(x1 * (TexW - 1)), 0, TexW - 1);
-                for (int x = px0; x <= px1; x++)
-                {
-                    for (int y = 0; y < TexH; y++)
-                        Blend(pixels, x, y, DivergencePlotColors.SpanBand);
-                }
-            }
+            DrawTimingBinLines(pixels, texW, texH, context.TimingBinMagnitudes, fullscreen: true);
+            DrawSuperCritBinLines(pixels, texW, texH, context.SuperCritBinMagnitude, fullscreen: true);
+            DrawCenterLine(pixels, texW, texH, fullscreen: true, context.SuperCritBinMagnitude);
+        }
+        else
+        {
+            DrawCenterLine(pixels, texW, texH, fullscreen: false, superCritMagnitude: 0f);
         }
 
-        int centerY = TexH / 2;
-        for (int x = 0; x < TexW; x++)
-        {
-            pixels[centerY * TexW + x] = DivergencePlotColors.CenterLine;
-            if (centerY + 1 < TexH)
-                pixels[(centerY + 1) * TexW + x] = DivergencePlotColors.CenterLine;
-        }
+        DrawSideMarker(pixels, texW, texH, true, DivergencePlotColors.AxisLabel);
+        DrawSideMarker(pixels, texW, texH, false, DivergencePlotColors.AxisLabel);
 
-        if (hits != null)
+        foreach (var hit in context.Hits)
         {
-            foreach (var hit in hits)
+            float nx = DivergencePlotLayout.BeatToX(hit.TargetBeat, context.TotalBeats);
+            int px = Mathf.Clamp(Mathf.RoundToInt(nx * (texW - 1)), 0, texW - 1);
+            Color c = DivergencePlotColors.ForHit(hit, context.StockColorSource);
+
+            if (hit.Marker == PlotMarkerKind.VerticalLine)
             {
-                float nx = DivergencePlotLayout.BeatToX(hit.TargetBeat, totalBeats);
-                float ny = DivergencePlotLayout.DivergenceToY(hit.SignedDivergence);
-                int px = Mathf.Clamp(Mathf.RoundToInt(nx * (TexW - 1)), 0, TexW - 1);
-                int py = Mathf.Clamp(Mathf.RoundToInt(ny * (TexH - 1)), 0, TexH - 1);
-                Color c = DivergencePlotColors.ForRating(hit.Rating, stockColorSource);
-                StampDot(pixels, px, py, c);
+                StampVerticalLine(pixels, texW, texH, px, c);
+                continue;
             }
+
+            float ny = DivergencePlotLayout.DivergenceToY(hit.SignedDivergence);
+            int py = Mathf.Clamp(Mathf.RoundToInt(ny * (texH - 1)), 0, texH - 1);
+            StampDot(pixels, texW, texH, px, py, c);
         }
 
         tex.SetPixels(pixels);
@@ -115,22 +141,159 @@ internal static class DivergencePlotRenderer
         return tex;
     }
 
-    private static void StampDot(Color[] pixels, int cx, int cy, Color c)
+    private static void DrawSpanBands<T>(
+        Color[] pixels,
+        int texW,
+        int texH,
+        IReadOnlyList<T> spans,
+        float totalBeats,
+        Color color)
+        where T : struct
     {
-        for (int dy = -1; dy <= 1; dy++)
-        for (int dx = -1; dx <= 1; dx++)
+        if (spans == null || spans.Count == 0)
+            return;
+
+        foreach (var span in spans)
         {
-            int x = cx + dx;
-            int y = cy + dy;
-            if (x < 0 || x >= TexW || y < 0 || y >= TexH)
-                continue;
-            pixels[y * TexW + x] = c;
+            var band = span is PracticeSpan practice
+                ? DivergencePlotLayout.SpanBandX(practice, totalBeats)
+                : span is ChartBeatSpan chart
+                    ? DivergencePlotLayout.SpanBandX(chart.StartBeat, chart.EndBeat, totalBeats)
+                    : default;
+            int px0 = Mathf.Clamp(Mathf.FloorToInt(band.x0 * (texW - 1)), 0, texW - 1);
+            int px1 = Mathf.Clamp(Mathf.CeilToInt(band.x1 * (texW - 1)), 0, texW - 1);
+            for (int x = px0; x <= px1; x++)
+            {
+                for (int y = 0; y < texH; y++)
+                    Blend(pixels, texW, x, y, color);
+            }
         }
     }
 
-    private static void Blend(Color[] pixels, int x, int y, Color over)
+    private static void DrawTimingBinLines(
+        Color[] pixels,
+        int texW,
+        int texH,
+        IReadOnlyList<float> magnitudes,
+        bool fullscreen = false)
     {
-        int i = y * TexW + x;
+        if (magnitudes == null)
+            return;
+
+        Color line = fullscreen ? DivergencePlotColors.TimingBinLineFullscreen : DivergencePlotColors.TimingBinLine;
+        foreach (float mag in magnitudes)
+        {
+            float earlyY = DivergencePlotLayout.DivergenceToY(-mag);
+            float lateY = DivergencePlotLayout.DivergenceToY(mag);
+            int pyEarly = Mathf.Clamp(Mathf.RoundToInt(earlyY * (texH - 1)), 0, texH - 1);
+            int pyLate = Mathf.Clamp(Mathf.RoundToInt(lateY * (texH - 1)), 0, texH - 1);
+            DrawHorizontalLine(pixels, texW, texH, pyEarly, line, 1);
+            DrawHorizontalLine(pixels, texW, texH, pyLate, line, 1);
+        }
+    }
+
+    private static void DrawSuperCritBinLines(
+        Color[] pixels,
+        int texW,
+        int texH,
+        float magnitude,
+        bool fullscreen = false)
+    {
+        if (magnitude <= 0f)
+            return;
+
+        Color line = fullscreen ? DivergencePlotColors.SuperCritBinLineFullscreen : DivergencePlotColors.SuperCritBinLine;
+        int pyEarly = SuperCritBinRow(texH, -magnitude);
+        int pyLate = SuperCritBinRow(texH, magnitude);
+        DrawHorizontalLine(pixels, texW, texH, pyEarly, line, 1);
+        DrawHorizontalLine(pixels, texW, texH, pyLate, line, 1);
+    }
+
+    private static void DrawCenterLine(
+        Color[] pixels,
+        int texW,
+        int texH,
+        bool fullscreen,
+        float superCritMagnitude)
+    {
+        Color line = fullscreen ? DivergencePlotColors.CenterLineFullscreen : DivergencePlotColors.CenterLine;
+        int pyCenter = superCritMagnitude > 0f
+            ? (SuperCritBinRow(texH, -superCritMagnitude) + SuperCritBinRow(texH, superCritMagnitude)) / 2
+            : SuperCritBinRow(texH, 0f);
+        DrawHorizontalLine(pixels, texW, texH, pyCenter, line, 1);
+    }
+
+    private static int SuperCritBinRow(int texH, float signedDivergence)
+    {
+        float y = DivergencePlotLayout.DivergenceToY(signedDivergence);
+        return Mathf.Clamp(Mathf.RoundToInt(y * (texH - 1)), 0, texH - 1);
+    }
+
+    private static void DrawHorizontalLine(Color[] pixels, int texW, int texH, int y, Color color, int thickness)
+    {
+        for (int t = 0; t < thickness; t++)
+        {
+            int row = y + t;
+            if (row < 0 || row >= texH)
+                continue;
+            for (int x = 0; x < texW; x++)
+                pixels[row * texW + x] = color;
+        }
+    }
+
+    private static void DrawSideMarker(Color[] pixels, int texW, int texH, bool early, Color color)
+    {
+        int x = 8;
+        int y = early ? texH - 14 : 6;
+        if (early)
+            StampLetterE(pixels, texW, texH, x, y, color);
+        else
+            StampLetterL(pixels, texW, texH, x, y, color);
+    }
+
+    private static void StampLetterE(Color[] pixels, int texW, int texH, int x, int y, Color c)
+    {
+        for (int dy = 0; dy < 9; dy++)
+            PlotPixel(pixels, texW, texH, x, y + dy, c);
+        for (int dx = 0; dx < 6; dx++)
+        {
+            PlotPixel(pixels, texW, texH, x + dx, y, c);
+            PlotPixel(pixels, texW, texH, x + dx, y + 4, c);
+            PlotPixel(pixels, texW, texH, x + dx, y + 8, c);
+        }
+    }
+
+    private static void StampLetterL(Color[] pixels, int texW, int texH, int x, int y, Color c)
+    {
+        for (int dy = 0; dy < 9; dy++)
+            PlotPixel(pixels, texW, texH, x, y + dy, c);
+        for (int dx = 0; dx < 6; dx++)
+            PlotPixel(pixels, texW, texH, x + dx, y + 8, c);
+    }
+
+    private static void StampDot(Color[] pixels, int texW, int texH, int cx, int cy, Color c)
+    {
+        for (int dy = -1; dy <= 1; dy++)
+        for (int dx = -1; dx <= 1; dx++)
+            PlotPixel(pixels, texW, texH, cx + dx, cy + dy, c);
+    }
+
+    private static void StampVerticalLine(Color[] pixels, int texW, int texH, int x, Color c)
+    {
+        for (int y = 2; y < texH - 2; y++)
+            PlotPixel(pixels, texW, texH, x, y, c);
+    }
+
+    private static void PlotPixel(Color[] pixels, int texW, int texH, int x, int y, Color c)
+    {
+        if (x < 0 || x >= texW || y < 0 || y >= texH)
+            return;
+        pixels[y * texW + x] = c;
+    }
+
+    private static void Blend(Color[] pixels, int texW, int x, int y, Color over)
+    {
+        int i = y * texW + x;
         Color under = pixels[i];
         float a = over.a;
         pixels[i] = new Color(
