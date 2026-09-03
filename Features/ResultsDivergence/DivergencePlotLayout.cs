@@ -17,6 +17,19 @@ public static class DivergencePlotLayout
         return Clamp01(0.5f - clamped / 200f);
     }
 
+    /// <summary>Map signed divergence to a texture row (0 = top, texHeight - 1 = bottom).</summary>
+    public static int DivergenceToRow(int texHeight, float signedDivergence)
+    {
+        if (texHeight <= 0)
+            return 0;
+
+        float y = DivergenceToY(signedDivergence);
+        int row = (int)Math.Round(y * (texHeight - 1));
+        if (row < 0)
+            return 0;
+        return row >= texHeight ? texHeight - 1 : row;
+    }
+
     public static (float x0, float x1) SpanBandX(PracticeSpan span, float totalBeats)
         => SpanBandX(span.StartBeat, span.EndBeat, totalBeats);
 

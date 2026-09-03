@@ -32,4 +32,21 @@ public class DivergencePlotLayoutTests
         Assert.Equal(0.25f, x0, 3);
         Assert.Equal(0.75f, x1, 3);
     }
+
+    [Theory]
+    [InlineData(512, 0f, 256)]
+    [InlineData(128, 0f, 64)]
+    public void DivergenceToRow_zero_at_center(int texHeight, float divergence, int expectedRow)
+        => Assert.Equal(expectedRow, DivergencePlotLayout.DivergenceToRow(texHeight, divergence));
+
+    [Fact]
+    public void DivergenceToRow_supercrit_midpoint_can_differ_from_zero_row()
+    {
+        const int texHeight = 512;
+        const float mag = 10f;
+        int early = DivergencePlotLayout.DivergenceToRow(texHeight, -mag);
+        int late = DivergencePlotLayout.DivergenceToRow(texHeight, mag);
+        int zero = DivergencePlotLayout.DivergenceToRow(texHeight, 0f);
+        Assert.Equal((early + late) / 2, zero - 1);
+    }
 }

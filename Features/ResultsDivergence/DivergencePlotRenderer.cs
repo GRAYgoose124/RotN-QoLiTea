@@ -37,6 +37,7 @@ internal static class DivergencePlotRenderer
         raw.texture = RenderTexture(context, fullscreen);
         raw.raycastTarget = false;
         ApplyOpacity(raw, context.OpacityPercent);
+        DivergencePlotScanline.Attach(raw);
         return raw;
     }
 
@@ -109,11 +110,11 @@ internal static class DivergencePlotRenderer
         {
             DrawTimingBinLines(pixels, texW, texH, context.TimingBinMagnitudes, fullscreen: true);
             DrawSuperCritBinLines(pixels, texW, texH, context.SuperCritBinMagnitude, fullscreen: true);
-            DrawCenterLine(pixels, texW, texH, fullscreen: true, context.SuperCritBinMagnitude);
+            DrawCenterLine(pixels, texW, texH, fullscreen: true);
         }
         else
         {
-            DrawCenterLine(pixels, texW, texH, fullscreen: false, superCritMagnitude: 0f);
+            DrawCenterLine(pixels, texW, texH, fullscreen: false);
         }
 
         DrawSideMarker(pixels, texW, texH, true, DivergencePlotColors.AxisLabel);
@@ -131,8 +132,7 @@ internal static class DivergencePlotRenderer
                 continue;
             }
 
-            float ny = DivergencePlotLayout.DivergenceToY(hit.SignedDivergence);
-            int py = Mathf.Clamp(Mathf.RoundToInt(ny * (texH - 1)), 0, texH - 1);
+            int py = DivergencePlotLayout.DivergenceToRow(texH, hit.SignedDivergence);
             StampDot(pixels, texW, texH, px, py, c);
         }
 
@@ -183,10 +183,8 @@ internal static class DivergencePlotRenderer
         Color line = fullscreen ? DivergencePlotColors.TimingBinLineFullscreen : DivergencePlotColors.TimingBinLine;
         foreach (float mag in magnitudes)
         {
-            float earlyY = DivergencePlotLayout.DivergenceToY(-mag);
-            float lateY = DivergencePlotLayout.DivergenceToY(mag);
-            int pyEarly = Mathf.Clamp(Mathf.RoundToInt(earlyY * (texH - 1)), 0, texH - 1);
-            int pyLate = Mathf.Clamp(Mathf.RoundToInt(lateY * (texH - 1)), 0, texH - 1);
+            int pyEarly = DivergencePlotLayout.DivergenceToRow(texH, -mag);
+            int pyLate = DivergencePlotLayout.DivergenceToRow(texH, mag);
             DrawHorizontalLine(pixels, texW, texH, pyEarly, line, 1);
             DrawHorizontalLine(pixels, texW, texH, pyLate, line, 1);
         }
@@ -203,8 +201,8 @@ internal static class DivergencePlotRenderer
             return;
 
         Color line = fullscreen ? DivergencePlotColors.SuperCritBinLineFullscreen : DivergencePlotColors.SuperCritBinLine;
-        int pyEarly = SuperCritBinRow(texH, -magnitude);
-        int pyLate = SuperCritBinRow(texH, magnitude);
+        int pyEarly = DivergencePlotLayout.DivergenceToRow(texH, -magnitude);
+        int pyLate = DivergencePlotLayout.DivergenceToRow(texH, magnitude);
         DrawHorizontalLine(pixels, texW, texH, pyEarly, line, 1);
         DrawHorizontalLine(pixels, texW, texH, pyLate, line, 1);
     }
@@ -213,27 +211,23 @@ internal static class DivergencePlotRenderer
         Color[] pixels,
         int texW,
         int texH,
-        bool fullscreen,
-        float superCritMagnitude)
+        bool fullscreen)
     {
         Color line = fullscreen ? DivergencePlotColors.CenterLineFullscreen : DivergencePlotColors.CenterLine;
-        int pyCenter = superCritMagnitude > 0f
-            ? (SuperCritBinRow(texH, -superCritMagnitude) + SuperCritBinRow(texH, superCritMagnitude)) / 2
-            : SuperCritBinRow(texH, 0f);
-        DrawHorizontalLine(pixels, texW, texH, pyCenter, line, 1);
+        int pyCenter = DivergencePlotLayout.DivergenceToRow(texH, 0f);
+        int thickness = fullscreen ? 1 : 2;
+        DrawHorizontalLine(pixels, texW, texH, pyCenter, line, thickness);
     }
 
-    private static int SuperCritBinRow(int texH, float signedDivergence)
+    private static void DrawHorizontalLine(Color[] pixels, int texW, int texH, int centerY, Color color, int thickness)
     {
-        float y = DivergencePlotLayout.DivergenceToY(signedDivergence);
-        return Mathf.Clamp(Mathf.RoundToInt(y * (texH - 1)), 0, texH - 1);
-    }
+        if (thickness <= 0)
+            return;
 
-    private static void DrawHorizontalLine(Color[] pixels, int texW, int texH, int y, Color color, int thickness)
-    {
+        int y0 = centerY - (thickness - 1) / 2;
         for (int t = 0; t < thickness; t++)
         {
-            int row = y + t;
+            int row = y0 + t;
             if (row < 0 || row >= texH)
                 continue;
             for (int x = 0; x < texW; x++)

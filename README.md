@@ -85,7 +85,7 @@ When worst sections are found and stock Practice is available, adds an **Auto** 
 | **SetSubscriberEnabled** | true | Set Subscriber picker. |
 | **OpenSetSubscriber** | false | One-shot: open Set Subscriber. |
 | **ResultsDivergencePlotEnabled** | true | Results scatter plot of timing divergence. |
-| **ToggleKey** | G | Results screen: toggle plot visibility. |
+| **ToggleKey** | G | Results screen: toggle plot visibility; double tap keybind for fullscreen. |
 | **PlotOpacity** | 90 | Plot opacity percent (`80` = 20% transparent). |
 | **WorstSectionPracticeEnabled** | true | Detect spans + Auto button / jumper. |
 

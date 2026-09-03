@@ -13,12 +13,17 @@ public enum PlotDisplayMode
 /// <summary>Per-results-screen plot instance, layout mode, and runtime controls.</summary>
 internal static class DivergencePlotSession
 {
+    private static bool _cursorUnlocked;
+    private static CursorLockMode _savedLockMode = CursorLockMode.None;
+    private static bool _savedCursorVisible;
+
     internal static RawImage ActivePlot { get; private set; }
     internal static PlotDisplayMode DisplayMode { get; private set; } = PlotDisplayMode.Docked;
     internal static PlotRenderContext Context { get; private set; }
 
     internal static void Reset()
     {
+        ReleaseMouse();
         ActivePlot = null;
         DisplayMode = PlotDisplayMode.Docked;
         Context = null;
@@ -28,11 +33,11 @@ internal static class DivergencePlotSession
     {
         ActivePlot = plot;
         Context = context;
-        DisplayMode = PlotDisplayMode.Docked;
+        DisplayMode = PlotDisplayMode.Hidden;
         if (plot == null)
             return;
 
-        plot.gameObject.SetActive(true);
+        plot.gameObject.SetActive(false);
         ApplyCurrentOpacity();
     }
 
@@ -40,7 +45,10 @@ internal static class DivergencePlotSession
     {
         DisplayMode = PlotDisplayMode.Hidden;
         if (ActivePlot != null)
+        {
             ActivePlot.gameObject.SetActive(false);
+            ReleaseMouse();
+        }
     }
 
     internal static void ApplyTapAction(PlotTapAction action)
@@ -72,6 +80,11 @@ internal static class DivergencePlotSession
 
         DisplayMode = mode;
         ActivePlot.gameObject.SetActive(mode != PlotDisplayMode.Hidden);
+        if (mode != PlotDisplayMode.Hidden)
+            AcquireMouse();
+        else
+            ReleaseMouse();
+
         DivergencePlotRenderer.ApplyLayout(ActivePlot.gameObject, mode);
         DivergencePlotRenderer.RefreshTexture(ActivePlot, Context, mode);
         ApplyCurrentOpacity();
@@ -91,5 +104,27 @@ internal static class DivergencePlotSession
 
         int opacity = DisplayMode == PlotDisplayMode.Fullscreen ? 100 : Context.OpacityPercent;
         DivergencePlotRenderer.ApplyOpacity(ActivePlot, opacity);
+    }
+
+    private static void AcquireMouse()
+    {
+        if (_cursorUnlocked)
+            return;
+
+        _savedLockMode = Cursor.lockState;
+        _savedCursorVisible = Cursor.visible;
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+        _cursorUnlocked = true;
+    }
+
+    private static void ReleaseMouse()
+    {
+        if (!_cursorUnlocked)
+            return;
+
+        Cursor.lockState = _savedLockMode;
+        Cursor.visible = _savedCursorVisible;
+        _cursorUnlocked = false;
     }
 }
