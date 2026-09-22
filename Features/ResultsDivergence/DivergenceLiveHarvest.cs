@@ -10,8 +10,7 @@ internal static class DivergenceLiveHarvest
         PlotHitRating rating,
         float ratingPercent = 0f,
         PlotMarkerKind marker = PlotMarkerKind.Dot,
-        string enemyDisplayName = null,
-        int enemyTypeId = 0)
+        string enemyDisplayName = null)
     {
         if (!ResultsDivergencePolicy.ShouldHarvest(
                 Plugin.Enabled,
@@ -31,8 +30,7 @@ internal static class DivergenceLiveHarvest
             ratingPercent,
             marker,
             isSuperCrit,
-            enemyDisplayName,
-            enemyTypeId));
+            enemyDisplayName));
     }
 
     internal static void TryAppendFailure(
@@ -41,24 +39,35 @@ internal static class DivergenceLiveHarvest
         float inputBeat,
         float targetBeatForTiming,
         PlotHitRating rating,
-        PlotMarkerKind marker = PlotMarkerKind.Dot,
-        string enemyDisplayName = null,
-        int enemyTypeId = 0)
+        string enemyDisplayName = null)
     {
         bool wasEarly = inputBeat < targetBeatForTiming;
-        float signed = SignedDivergenceRules.ForFailure(
-            ratingPercent,
-            wasEarly,
-            inputBeat,
-            targetBeatForTiming);
+        PlotMarkerKind resolvedMarker;
+        float signed;
+        if (rating == PlotHitRating.Miss)
+        {
+            resolvedMarker = SignedDivergenceRules.MarkerForMiss(
+                ratingPercent, inputBeat, targetBeatForTiming);
+            signed = SignedDivergenceRules.SignedForMiss(
+                ratingPercent, wasEarly, inputBeat, targetBeatForTiming);
+        }
+        else
+        {
+            resolvedMarker = PlotMarkerKind.Dot;
+            signed = SignedDivergenceRules.ForFailure(
+                ratingPercent,
+                wasEarly,
+                inputBeat,
+                targetBeatForTiming);
+        }
+
         TryAppend(
             targetBeat,
             signed,
             rating,
             ratingPercent,
-            marker,
-            enemyDisplayName,
-            enemyTypeId);
+            resolvedMarker,
+            enemyDisplayName);
     }
 
     internal static void TryAppendOverhit(float inputBeat)
@@ -97,14 +106,34 @@ internal static class DivergenceLiveHarvest
             return;
 
         PlotHitRating plotRating = DivergencePlotColors.FromInputRating(inputRating, wasPlayerInput);
-        float signed = plotRating == PlotHitRating.Miss || plotRating == PlotHitRating.ComboBreak
-            ? SignedDivergenceRules.ForFailure(
-                ratingPercent,
-                inputBeatNumber < targetBeatNumber,
-                inputBeatNumber,
-                targetBeatNumber)
-            : SignedDivergenceRules.Compute(ratingPercent, inputBeatNumber < targetBeatNumber);
+        float signed;
+        PlotMarkerKind marker = PlotMarkerKind.Dot;
+        if (plotRating == PlotHitRating.Miss || plotRating == PlotHitRating.ComboBreak)
+        {
+            if (plotRating == PlotHitRating.Miss)
+            {
+                marker = SignedDivergenceRules.MarkerForMiss(
+                    ratingPercent, inputBeatNumber, targetBeatNumber);
+                signed = SignedDivergenceRules.SignedForMiss(
+                    ratingPercent,
+                    inputBeatNumber < targetBeatNumber,
+                    inputBeatNumber,
+                    targetBeatNumber);
+            }
+            else
+            {
+                signed = SignedDivergenceRules.ForFailure(
+                    ratingPercent,
+                    inputBeatNumber < targetBeatNumber,
+                    inputBeatNumber,
+                    targetBeatNumber);
+            }
+        }
+        else
+        {
+            signed = SignedDivergenceRules.Compute(ratingPercent, inputBeatNumber < targetBeatNumber);
+        }
 
-        TryAppend(targetBeatNumber, signed, plotRating, ratingPercent);
+        TryAppend(targetBeatNumber, signed, plotRating, ratingPercent, marker);
     }
 }

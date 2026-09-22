@@ -47,13 +47,27 @@ internal static class StageInputRecordHarvest
             if (!hasBeat && !response.wasPlayerInput)
                 continue;
 
-            float signed = plotRating == PlotHitRating.Miss || plotRating == PlotHitRating.ComboBreak
-                ? SignedDivergenceRules.ForFailure(
+            float signed;
+            PlotMarkerKind marker = PlotMarkerKind.Dot;
+            if (plotRating == PlotHitRating.Miss)
+            {
+                marker = SignedDivergenceRules.MarkerForMiss(
+                    response.ratingPercent, inputBeat, targetBeat);
+                signed = SignedDivergenceRules.SignedForMiss(
+                    response.ratingPercent, response.wasEarly, inputBeat, targetBeat);
+            }
+            else if (plotRating == PlotHitRating.ComboBreak)
+            {
+                signed = SignedDivergenceRules.ForFailure(
                     response.ratingPercent,
                     response.wasEarly,
                     inputBeat,
-                    targetBeat)
-                : SignedDivergenceRules.Compute(response.ratingPercent, response.wasEarly);
+                    targetBeat);
+            }
+            else
+            {
+                signed = SignedDivergenceRules.Compute(response.ratingPercent, response.wasEarly);
+            }
 
             bool isSuperCrit = DivergenceRatingRules.IsSuperCrit(
                 plotRating,
@@ -65,7 +79,7 @@ internal static class StageInputRecordHarvest
                 signed,
                 plotRating,
                 response.ratingPercent,
-                PlotMarkerKind.Dot,
+                marker,
                 isSuperCrit));
         }
 

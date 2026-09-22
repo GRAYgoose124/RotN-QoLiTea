@@ -83,15 +83,7 @@ internal static class ResultsDivergencePatches
                 {
                     if (hit.Enemy == null)
                         continue;
-
-                    var sprite = hit.Enemy.SpriteRenderer != null
-                        ? hit.Enemy.SpriteRenderer.sprite
-                        : hit.Enemy.GetComponentInChildren<SpriteRenderer>()?.sprite;
-                    RunSessionStore.RememberEnemyVisual(
-                        hit.TargetBeat,
-                        hit.Enemy.DisplayName,
-                        hit.Enemy.EnemyTypeId,
-                        sprite);
+                    RunSessionStore.RememberEnemyName(hit.TargetBeat, hit.Enemy.DisplayName);
                 }
             }
 
@@ -114,17 +106,13 @@ internal static class ResultsDivergencePatches
                 if (hit.InputRating != InputRating.Miss)
                     continue;
 
-                string enemyName = hit.Enemy?.DisplayName;
-                int typeId = hit.Enemy != null ? hit.Enemy.EnemyTypeId : 0;
                 DivergenceLiveHarvest.TryAppendFailure(
                     hit.TargetBeat,
                     hit.RatingPercent,
                     hit.InputBeat,
                     hit.TargetBeat,
                     PlotHitRating.Miss,
-                    PlotMarkerKind.Dot,
-                    enemyName,
-                    typeId);
+                    hit.Enemy?.DisplayName);
             }
 
             if (ProcessHitClassification.IsPartialMiss(hitDatas.Count, positionCount)

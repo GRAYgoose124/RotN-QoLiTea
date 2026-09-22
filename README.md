@@ -60,7 +60,7 @@ NecroManager one-shots under **TrackSets**.
 
 ### Results divergence plot
 
-On the **results screen**, draws a scatter plot of signed timing divergence from on-beat perfect (center line = perfect; **E** top / **L** bottom mark early vs late). Gold bands mark **activated vibe-power** windows (not chart vibe monsters); fullscreen captions show per-vibe hit count and first→last monster names. Hits use tinted monster sprites when available (else dots). Super-crit hits are gold. True overhits are pink verticals; miss/empty swings with open windows are **red** verticals. Full width along the bottom by default; **double-tap G** for opaque fullscreen (timing-bin guide lines + gold super-crit bin); **G** or **Esc** closes. Default **90%** docked opacity via `PlotOpacity`. Does not replace the stock results histogram.
+On the **results screen**, draws a scatter plot of signed timing divergence from on-beat perfect (center line = perfect; **E** top / **L** bottom mark early vs late). Gold bands mark **activated vibe-power** windows (not chart vibe monsters); fullscreen captions show per-vibe hit count and first→last monster names. Timed hits are colored dots; untimed misses are red verticals; true overhits are pink verticals. Full width along the bottom by default; **double-tap G** for opaque fullscreen (timing-bin guide lines + gold super-crit bin); **G** or **Esc** closes. Default **90%** docked opacity via `PlotOpacity`. Does not replace the stock results histogram.
 
 ### Practice worst sections
 

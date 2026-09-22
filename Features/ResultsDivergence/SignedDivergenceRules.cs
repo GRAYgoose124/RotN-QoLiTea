@@ -35,9 +35,27 @@ public static class SignedDivergenceRules
         return (early ? -1f : 1f) * mag;
     }
 
-    private static bool HasUsableRatingPercent(float ratingPercent)
+    /// <summary>True when a miss has real early/late timing (not a synthetic ±100 fallback).</summary>
+    public static bool MissHasTiming(float ratingPercent, float inputBeat, float targetBeat)
+        => HasUsableRatingPercent(ratingPercent) || HasBeatTiming(inputBeat, targetBeat);
+
+    /// <summary>Timed misses → dots; untimed misses → full-height verticals.</summary>
+    public static PlotMarkerKind MarkerForMiss(float ratingPercent, float inputBeat, float targetBeat)
+        => MissHasTiming(ratingPercent, inputBeat, targetBeat)
+            ? PlotMarkerKind.Dot
+            : PlotMarkerKind.VerticalLine;
+
+    /// <summary>Signed Y for a miss marker; untimed verticals sit on the center line.</summary>
+    public static float SignedForMiss(float ratingPercent, bool wasEarly, float inputBeat, float targetBeat)
+    {
+        if (!MissHasTiming(ratingPercent, inputBeat, targetBeat))
+            return 0f;
+        return ForFailure(ratingPercent, wasEarly, inputBeat, targetBeat);
+    }
+
+    public static bool HasUsableRatingPercent(float ratingPercent)
         => float.IsFinite(ratingPercent) && ratingPercent > 0f && ratingPercent < 100f;
 
-    private static bool HasBeatTiming(float inputBeat, float targetBeat)
+    public static bool HasBeatTiming(float inputBeat, float targetBeat)
         => float.IsFinite(inputBeat) && float.IsFinite(targetBeat) && inputBeat != targetBeat;
 }

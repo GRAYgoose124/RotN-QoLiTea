@@ -9,8 +9,7 @@ public readonly struct HitDivergenceSample
         float ratingPercent = 0f,
         PlotMarkerKind marker = PlotMarkerKind.Dot,
         bool isSuperCrit = false,
-        string enemyDisplayName = null,
-        int enemyTypeId = 0)
+        string enemyDisplayName = null)
     {
         TargetBeat = targetBeat;
         SignedDivergence = signedDivergence;
@@ -19,7 +18,6 @@ public readonly struct HitDivergenceSample
         Marker = marker;
         IsSuperCrit = isSuperCrit;
         EnemyDisplayName = enemyDisplayName ?? string.Empty;
-        EnemyTypeId = enemyTypeId;
     }
 
     public float TargetBeat { get; }
@@ -29,12 +27,11 @@ public readonly struct HitDivergenceSample
     public PlotMarkerKind Marker { get; }
     public bool IsSuperCrit { get; }
     public string EnemyDisplayName { get; }
-    public int EnemyTypeId { get; }
 
     public bool IsPerfect => Rating == PlotHitRating.Perfect;
     public bool IsBad => Rating != PlotHitRating.Perfect;
 
-    public HitDivergenceSample WithEnemy(string displayName, int typeId)
+    public HitDivergenceSample WithEnemy(string displayName)
         => new(
             TargetBeat,
             SignedDivergence,
@@ -42,6 +39,5 @@ public readonly struct HitDivergenceSample
             RatingPercent,
             Marker,
             IsSuperCrit,
-            displayName,
-            typeId);
+            displayName);
 }
