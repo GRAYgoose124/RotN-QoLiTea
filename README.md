@@ -13,7 +13,7 @@ On the **official** or **Custom Music** title list, press the random key (defaul
 1. If every folder is closed, opens them all so the pool is the full viewable list (skips promo / tutorial / locked / filler).
 2. Picks a true random eligible track (avoids the current song and a short recent-history bag).
 3. Scrolls toward that track (speed scales with list size; hard brake to a dead stop). On huge lists the spin is capped for snappiness, then the highlight snaps to the real pick.
-4. Starts the stage with the difficulty you already had selected - skips the loadout screen.
+4. Starts the stage with the difficulty you already had selected - skips the loadout screen (or opens the stock loadout if **RandomSongOpenLoadout** is on).
 
 ### Lazy Custom Tracks
 
@@ -60,7 +60,7 @@ NecroManager one-shots under **TrackSets**.
 
 ### Results divergence plot
 
-On the **results screen**, draws a scatter plot of signed timing divergence from on-beat perfect (center line = perfect; **E** top / **L** bottom mark early vs late). Gold bands mark **activated vibe-power** windows (not chart vibe monsters). Super-crit hits are gold dots. Overhit combo breaks are vertical beat lines. Full width along the bottom by default; **double-tap G** for opaque fullscreen (timing-bin guide lines + gold super-crit bin); **G** or **Esc** closes. Default **90%** docked opacity via `PlotOpacity`. Does not replace the stock results histogram.
+On the **results screen**, draws a scatter plot of signed timing divergence from on-beat perfect (center line = perfect; **E** top / **L** bottom mark early vs late). Gold bands mark **activated vibe-power** windows (not chart vibe monsters); fullscreen captions show per-vibe hit count and first→last monster names. Hits use tinted monster sprites when available (else dots). Super-crit hits are gold. True overhits are pink verticals; miss/empty swings with open windows are **red** verticals. Full width along the bottom by default; **double-tap G** for opaque fullscreen (timing-bin guide lines + gold super-crit bin); **G** or **Esc** closes. Default **90%** docked opacity via `PlotOpacity`. Does not replace the stock results histogram.
 
 ### Practice worst sections
 
@@ -73,6 +73,7 @@ When worst sections are found and stock Practice is available, adds an **Auto** 
 | **Enabled** | true | Master toggle - all features off when false. |
 | **RandomSongEnabled** | true | Jukebox random song. |
 | **RandomKey** | J | Hotkey for random song (title list only). |
+| **RandomSongOpenLoadout** | false | After jukebox: open loadout instead of auto-start. |
 | **LazyCustomTracksEnabled** | true | Custom Music lazy load / cache. |
 | **RunClearTrackListCache** | false | One-shot: clear track list cache. |
 | **WorkshopAutoScanEnabled** | true | Custom Music: new Workshop publish overlay. |

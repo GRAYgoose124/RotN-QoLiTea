@@ -20,6 +20,7 @@
   <!-- Pure logic only — avoid Unity/BepInEx in the test host. -->
   <ItemGroup>
     <Compile Include="..\Features\RandomSong\RandomSongRules.cs" Link="RandomSongRules.cs" />
+    <Compile Include="..\Features\RandomSong\RandomSongPlayPolicy.cs" Link="RandomSongPlayPolicy.cs" />
     <Compile Include="..\Features\LazyCustomTracks\CacheReconcilePolicy.cs" Link="CacheReconcilePolicy.cs" />
     <Compile Include="..\Features\LazyCustomTracks\CacheFolderFieldsPolicy.cs" Link="CacheFolderFieldsPolicy.cs" />
     <Compile Include="..\Features\LazyCustomTracks\WorkshopDeltaPolicy.cs" Link="WorkshopDeltaPolicy.cs" />
@@ -37,6 +38,9 @@
     <Compile Include="..\Features\ResultsDivergence\HitDivergenceSample.cs" Link="HitDivergenceSample.cs" />
     <Compile Include="..\Features\ResultsDivergence\PlotMarkerKind.cs" Link="PlotMarkerKind.cs" />
     <Compile Include="..\Features\ResultsDivergence\PracticeSpan.cs" Link="PracticeSpan.cs" />
+    <Compile Include="..\Features\ResultsDivergence\ProcessHitClassification.cs" Link="ProcessHitClassification.cs" />
+    <Compile Include="..\Features\ResultsDivergence\VibeWindowStats.cs" Link="VibeWindowStats.cs" />
+    <Compile Include="..\Features\ResultsDivergence\ChartBeatSpan.cs" Link="ChartBeatSpan.cs" />
     <Compile Include="..\Features\ResultsDivergence\WorstSectionDetector.cs" Link="WorstSectionDetector.cs" />
     <Compile Include="..\Features\ResultsDivergence\DivergencePlotLayout.cs" Link="DivergencePlotLayout.cs" />
     <Compile Include="..\Features\ResultsDivergence\RunHitHarvest.cs" Link="RunHitHarvest.cs" />

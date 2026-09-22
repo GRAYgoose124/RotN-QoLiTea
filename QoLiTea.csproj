@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>QoLiTea</AssemblyName>
     <Product>QoLiTea</Product>
-    <Version>1.0.3</Version>
+    <Version>1.0.4</Version>
     <BepInExPluginGuid>rotn.dimethyltea.QoLiTea</BepInExPluginGuid>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>

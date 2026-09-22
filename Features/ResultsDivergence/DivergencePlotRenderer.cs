@@ -133,8 +133,15 @@ internal static class DivergencePlotRenderer
             }
 
             int py = DivergencePlotLayout.DivergenceToRow(texH, hit.SignedDivergence);
-            StampDot(pixels, texW, texH, px, py, c);
+            var sprite = RunSessionStore.TryGetSprite(hit.TargetBeat);
+            if (sprite != null)
+                StampSpriteTinted(pixels, texW, texH, px, py, sprite, c, fullscreen ? 10 : 6);
+            else
+                StampDot(pixels, texW, texH, px, py, c);
         }
+
+        if (fullscreen)
+            DrawVibeStatCaptions(pixels, texW, texH, context);
 
         tex.SetPixels(pixels);
         tex.Apply(false, false);
@@ -270,6 +277,130 @@ internal static class DivergencePlotRenderer
         for (int dy = -1; dy <= 1; dy++)
         for (int dx = -1; dx <= 1; dx++)
             PlotPixel(pixels, texW, texH, cx + dx, cy + dy, c);
+    }
+
+    private static void StampSpriteTinted(
+        Color[] pixels,
+        int texW,
+        int texH,
+        int cx,
+        int cy,
+        Sprite sprite,
+        Color tint,
+        int size)
+    {
+        if (sprite == null || sprite.texture == null || size < 2 || !sprite.texture.isReadable)
+        {
+            StampDot(pixels, texW, texH, cx, cy, tint);
+            return;
+        }
+
+        var rect = sprite.textureRect;
+        var tex = sprite.texture;
+        int half = size / 2;
+        for (int dy = 0; dy < size; dy++)
+        for (int dx = 0; dx < size; dx++)
+        {
+            float u = (dx + 0.5f) / size;
+            float v = (dy + 0.5f) / size;
+            int sx = Mathf.Clamp(Mathf.FloorToInt(rect.x + u * rect.width), 0, tex.width - 1);
+            int sy = Mathf.Clamp(Mathf.FloorToInt(rect.y + v * rect.height), 0, tex.height - 1);
+            Color src = tex.GetPixel(sx, sy);
+            if (src.a < 0.08f)
+                continue;
+            Color outC = new(src.r * tint.r, src.g * tint.g, src.b * tint.b, src.a * tint.a);
+            PlotPixel(pixels, texW, texH, cx - half + dx, cy - half + dy, outC);
+        }
+    }
+
+    private static void DrawVibeStatCaptions(
+        Color[] pixels,
+        int texW,
+        int texH,
+        PlotRenderContext context)
+    {
+        if (context.VibeStats == null || context.VibeStats.Count == 0)
+            return;
+
+        Color ink = new(1f, 0.92f, 0.55f, 0.95f);
+        for (var i = 0; i < context.VibeStats.Count; i++)
+        {
+            var stat = context.VibeStats[i];
+            float midBeat = (stat.Span.StartBeat + stat.Span.EndBeat) * 0.5f;
+            float nx = DivergencePlotLayout.BeatToX(midBeat, context.TotalBeats);
+            int px = Mathf.Clamp(Mathf.RoundToInt(nx * (texW - 1)), 0, texW - 1);
+
+            string first = string.IsNullOrEmpty(stat.FirstEnemyName) ? "?" : stat.FirstEnemyName;
+            string last = string.IsNullOrEmpty(stat.LastEnemyName) ? "?" : stat.LastEnemyName;
+            string label = $"{stat.HitCount}:{TrimName(first)}>{TrimName(last)}";
+            DrawTinyLabel(pixels, texW, texH, px, texH - 10, label, ink);
+        }
+    }
+
+    private static string TrimName(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+            return "?";
+        return name.Length <= 6 ? name : name.Substring(0, 6);
+    }
+
+    private static void DrawTinyLabel(
+        Color[] pixels,
+        int texW,
+        int texH,
+        int cx,
+        int cy,
+        string text,
+        Color c)
+    {
+        if (string.IsNullOrEmpty(text))
+            return;
+
+        int x = cx - text.Length * 2;
+        for (var i = 0; i < text.Length; i++)
+        {
+            DrawTinyGlyph(pixels, texW, texH, x + i * 4, cy, text[i], c);
+        }
+    }
+
+    private static void DrawTinyGlyph(
+        Color[] pixels,
+        int texW,
+        int texH,
+        int x,
+        int y,
+        char ch,
+        Color c)
+    {
+        // Compact 3x5 marks for digits / arrows so fullscreen vibe captions stay readable.
+        uint bits = ch switch
+        {
+            '0' => 0b111_101_101_101_111,
+            '1' => 0b010_110_010_010_111,
+            '2' => 0b111_001_111_100_111,
+            '3' => 0b111_001_111_001_111,
+            '4' => 0b101_101_111_001_001,
+            '5' => 0b111_100_111_001_111,
+            '6' => 0b111_100_111_101_111,
+            '7' => 0b111_001_001_001_001,
+            '8' => 0b111_101_111_101_111,
+            '9' => 0b111_101_111_001_111,
+            ':' => 0b000_010_000_010_000,
+            '→' => 0b100_010_001_010_100,
+            '>' => 0b100_010_001_010_100,
+            '-' => 0b000_000_111_000_000,
+            '?' => 0b111_001_010_000_010,
+            _ => 0b010_101_111_101_101, // letter-ish blob
+        };
+
+        for (int row = 0; row < 5; row++)
+        for (int col = 0; col < 3; col++)
+        {
+            int bit = 14 - (row * 3 + col);
+            if (((bits >> bit) & 1) == 0)
+                continue;
+            PlotPixel(pixels, texW, texH, x + col, y - row, c);
+        }
     }
 
     private static void StampVerticalLine(Color[] pixels, int texW, int texH, int x, Color c)

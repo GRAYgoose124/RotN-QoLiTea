@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using HarmonyLib;
 using Shared.TrackData;
 using Shared.TrackSelection;
 using Shared.UGC.Local;
@@ -145,11 +146,14 @@ internal sealed class RandomSongDriver
             arr[i] = metas[i];
 
         group.RefreshTrackData(arr, targetIndex, selectedDifficulty);
+        // RefreshTrackData sets index + options but does not fire selection callbacks.
+        AccessTools.Method(typeof(BaseTrackSelectionOptionGroup), "OnSelectedTrackChanged")
+            ?.Invoke(group, null);
     }
 
     private IEnumerator RunOfficial(TrackSelectionSceneController controller)
     {
-        var disabledInput = false;
+        var weDisabledInput = false;
         try
         {
             var group = controller._infiniteTrackSelectionOptionGroup;
@@ -166,22 +170,33 @@ internal sealed class RandomSongDriver
                 openAllFoldersWhenClosed: true,
                 afterLand: (elig, indices) =>
                 {
-                    disabledInput = false;
                     var metas = group._trackMetaData;
                     var sid = group._selectedTrackIndex;
-                    if (metas != null && sid >= 0 && sid < metas.Count)
-                        RememberLevelId(metas[sid]?.LevelId, indices?.Count ?? 0);
+                    if (metas == null || sid < 0 || sid >= metas.Count)
+                        return null;
+
+                    var levelId = metas[sid]?.LevelId;
+                    RememberLevelId(levelId, indices?.Count ?? 0);
+
+                    if (Plugin.RandomSongShouldOpenLoadout)
+                    {
+                        if (!string.IsNullOrEmpty(levelId))
+                            controller.HandleTrackSubmitted(levelId);
+                        return null;
+                    }
+
                     return controller.GoToSelectedStageCoroutine();
                 },
                 setInputDisabled: v =>
                 {
                     controller.InputDisabled = v;
-                    disabledInput = v;
+                    if (v)
+                        weDisabledInput = true;
                 });
         }
         finally
         {
-            if (disabledInput && controller != null)
+            if (weDisabledInput && controller != null)
                 controller.InputDisabled = false;
             _running = null;
         }
@@ -189,7 +204,7 @@ internal sealed class RandomSongDriver
 
     private IEnumerator RunCustom(CustomTracksSelectionSceneController controller)
     {
-        var disabledInput = false;
+        var weDisabledInput = false;
         try
         {
             var group = controller._trackSelectionOptionGroup;
@@ -198,6 +213,8 @@ internal sealed class RandomSongDriver
                 Plugin.Logger?.LogWarning("QoLiTea: custom group missing/uninitialized");
                 yield break;
             }
+
+            ClearCustomSubmitted(controller);
 
             yield return EnsureEligibleAndScroll(
                 group,
@@ -208,21 +225,44 @@ internal sealed class RandomSongDriver
                 openAllFoldersWhenClosed: false,
                 afterLand: (elig, indices) =>
                 {
-                    disabledInput = false;
+                    if (Plugin.RandomSongShouldOpenLoadout)
+                    {
+                        var metas = group._trackMetaData;
+                        var sid = group._selectedTrackIndex;
+                        if (metas != null && sid >= 0 && sid < metas.Count)
+                        {
+                            var levelId = metas[sid]?.LevelId;
+                            RememberLevelId(levelId, indices?.Count ?? 0);
+                            if (!string.IsNullOrEmpty(levelId))
+                                controller.HandleTrackSubmitted(levelId);
+                        }
+
+                        return null;
+                    }
+
                     return GoToCustomStageSkippingLoadout(controller, group, elig, indices);
                 },
                 setInputDisabled: v =>
                 {
                     controller.InputDisabled = v;
-                    disabledInput = v;
+                    if (v)
+                        weDisabledInput = true;
                 });
         }
         finally
         {
-            if (disabledInput && controller != null)
+            if (weDisabledInput && controller != null)
                 controller.InputDisabled = false;
             _running = null;
         }
+    }
+
+    private static void ClearCustomSubmitted(CustomTracksSelectionSceneController controller)
+    {
+        if (controller == null)
+            return;
+        controller._submittedTrackMetadata = null;
+        controller._submittedTrackDifficulty = null;
     }
 
     /// <summary>
@@ -266,7 +306,10 @@ internal sealed class RandomSongDriver
             tried.Add(levelId);
 
             controller.HandleTrackSelected(idx);
+            // HandleTrackSelected / display-mode hooks can clear InputDisabled — keep locked until start.
+            controller.InputDisabled = true;
             yield return null;
+            controller.InputDisabled = true;
 
             Plugin.Logger?.LogInfo($"QoLiTea: resolving custom track {levelId} (attempt {attempt + 1})");
 
@@ -308,6 +351,7 @@ internal sealed class RandomSongDriver
             if (trackMetadata == null)
             {
                 Plugin.Logger?.LogWarning($"QoLiTea: could not resolve custom track {levelId}");
+                ClearCustomSubmitted(controller);
                 var nextMissing = PickUnusedEligibleIndex(metas, eligibleIndices, tried, idx);
                 if (nextMissing == null)
                     yield break;
@@ -316,10 +360,7 @@ internal sealed class RandomSongDriver
                 continue;
             }
 
-            controller._submittedTrackMetadata = trackMetadata;
             var difficulty = trackMetadata.GetDifficulty(controller._selectedDifficulty);
-            controller._submittedTrackDifficulty = difficulty;
-
             if (difficulty != null
                 && !string.IsNullOrEmpty(difficulty.BeatmapFilePath)
                 && !difficulty.BeatCount.HasValue)
@@ -329,12 +370,13 @@ internal sealed class RandomSongDriver
                     yield return null;
 
                 if (estTask != null && !estTask.IsFaulted && estTask.Result != null)
-                    controller._submittedTrackDifficulty = estTask.Result;
+                    difficulty = estTask.Result;
             }
 
-            if (controller._submittedTrackDifficulty != null
-                && !string.IsNullOrEmpty(controller._submittedTrackDifficulty.BeatmapFilePath))
+            if (difficulty != null && !string.IsNullOrEmpty(difficulty.BeatmapFilePath))
             {
+                controller._submittedTrackMetadata = trackMetadata;
+                controller._submittedTrackDifficulty = difficulty;
                 Plugin.Logger?.LogInfo($"QoLiTea: starting custom stage {levelId}");
                 RememberLevelId(levelId, eligibleIndices.Count);
                 controller.GoToSelectedStage();
@@ -344,6 +386,7 @@ internal sealed class RandomSongDriver
             Plugin.Logger?.LogWarning(
                 $"QoLiTea: {levelId} unavailable for {controller._selectedDifficulty} after resolve — trying another");
 
+            ClearCustomSubmitted(controller);
             var next = PickUnusedEligibleIndex(metas, eligibleIndices, tried, idx);
             if (next == null)
                 break;
@@ -353,6 +396,7 @@ internal sealed class RandomSongDriver
             yield return WaitHold(group, RandomSongRules.DeadStopHoldSeconds);
         }
 
+        ClearCustomSubmitted(controller);
         Plugin.Logger?.LogWarning("QoLiTea: no custom track playable on current difficulty");
     }
 

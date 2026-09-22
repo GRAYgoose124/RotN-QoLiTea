@@ -9,7 +9,9 @@ internal static class DivergenceLiveHarvest
         float signed,
         PlotHitRating rating,
         float ratingPercent = 0f,
-        PlotMarkerKind marker = PlotMarkerKind.Dot)
+        PlotMarkerKind marker = PlotMarkerKind.Dot,
+        string enemyDisplayName = null,
+        int enemyTypeId = 0)
     {
         if (!ResultsDivergencePolicy.ShouldHarvest(
                 Plugin.Enabled,
@@ -28,7 +30,9 @@ internal static class DivergenceLiveHarvest
             rating,
             ratingPercent,
             marker,
-            isSuperCrit));
+            isSuperCrit,
+            enemyDisplayName,
+            enemyTypeId));
     }
 
     internal static void TryAppendFailure(
@@ -36,7 +40,10 @@ internal static class DivergenceLiveHarvest
         float ratingPercent,
         float inputBeat,
         float targetBeatForTiming,
-        PlotHitRating rating)
+        PlotHitRating rating,
+        PlotMarkerKind marker = PlotMarkerKind.Dot,
+        string enemyDisplayName = null,
+        int enemyTypeId = 0)
     {
         bool wasEarly = inputBeat < targetBeatForTiming;
         float signed = SignedDivergenceRules.ForFailure(
@@ -44,7 +51,14 @@ internal static class DivergenceLiveHarvest
             wasEarly,
             inputBeat,
             targetBeatForTiming);
-        TryAppend(targetBeat, signed, rating, ratingPercent);
+        TryAppend(
+            targetBeat,
+            signed,
+            rating,
+            ratingPercent,
+            marker,
+            enemyDisplayName,
+            enemyTypeId);
     }
 
     internal static void TryAppendOverhit(float inputBeat)
@@ -53,6 +67,15 @@ internal static class DivergenceLiveHarvest
             inputBeat,
             0f,
             PlotHitRating.ComboBreak,
+            marker: PlotMarkerKind.VerticalLine);
+    }
+
+    internal static void TryAppendMissVertical(float inputBeat)
+    {
+        TryAppend(
+            inputBeat,
+            0f,
+            PlotHitRating.Miss,
             marker: PlotMarkerKind.VerticalLine);
     }
 

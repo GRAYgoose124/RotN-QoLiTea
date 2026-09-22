@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace QoLiTea.Features.ResultsDivergence;
 
@@ -7,6 +8,7 @@ internal static class RunSessionStore
 {
     private static readonly List<HitDivergenceSample> LiveHits = new();
     private static readonly List<ChartBeatSpan> LiveVibeSpans = new();
+    private static readonly Dictionary<float, Sprite> SpritesByBeat = new();
     private static float? _openVibeStartBeat;
 
     internal static IReadOnlyList<HitDivergenceSample> LastHits { get; set; } =
@@ -21,6 +23,7 @@ internal static class RunSessionStore
         TruePerfectMinimum = truePerfectMinimum;
         LiveHits.Clear();
         LiveVibeSpans.Clear();
+        SpritesByBeat.Clear();
         _openVibeStartBeat = null;
         LastHits = Array.Empty<HitDivergenceSample>();
         LastTotalBeats = 0f;
@@ -28,6 +31,30 @@ internal static class RunSessionStore
 
     internal static void AppendLive(HitDivergenceSample sample)
         => LiveHits.Add(sample);
+
+    internal static void RememberEnemyVisual(float targetBeat, string displayName, int typeId, Sprite sprite)
+    {
+        if (targetBeat <= 0f)
+            return;
+
+        if (sprite != null)
+            SpritesByBeat[targetBeat] = sprite;
+
+        for (var i = LiveHits.Count - 1; i >= 0; i--)
+        {
+            if (Math.Abs(LiveHits[i].TargetBeat - targetBeat) > 0.0001f)
+                continue;
+            LiveHits[i] = LiveHits[i].WithEnemy(displayName, typeId);
+            return;
+        }
+    }
+
+    internal static Sprite TryGetSprite(float targetBeat)
+    {
+        if (SpritesByBeat.TryGetValue(targetBeat, out var sprite))
+            return sprite;
+        return null;
+    }
 
     internal static void OnVibeActivated(float beat)
     {
@@ -69,6 +96,7 @@ internal static class RunSessionStore
     {
         LiveHits.Clear();
         LiveVibeSpans.Clear();
+        SpritesByBeat.Clear();
         _openVibeStartBeat = null;
         LastHits = Array.Empty<HitDivergenceSample>();
         LastTotalBeats = 0f;

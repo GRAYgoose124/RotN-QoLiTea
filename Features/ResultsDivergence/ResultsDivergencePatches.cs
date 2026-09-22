@@ -57,12 +57,14 @@ internal static class ResultsDivergencePatches
     /// <summary>
     /// RR skips <see cref="StageInputRecord.RecordInput"/> for note misses and calls
     /// <see cref="StageInputRecord.RecordErrantInput"/> for empty swings (overhits).
+    /// Empty/partial swings with open hit windows are miss-style vert reds, not pink overhits.
     /// </summary>
     [HarmonyPostfix]
     [HarmonyPatch(typeof(RRStageController), nameof(RRStageController.ProcessHitData))]
     private static void ProcessHitDataPostfix(
         RRStageController __instance,
         List<RREnemyController.EnemyHitData> hitDatas,
+        List<Unity.Mathematics.int2> positionsToAttack,
         bool isBaneInput,
         bool isDebugInput)
     {
@@ -71,10 +73,38 @@ internal static class ResultsDivergencePatches
             if (isBaneInput || isDebugInput)
                 return;
 
+            int positionCount = positionsToAttack?.Count ?? 0;
+            bool anyWindowOpen = __instance._enemyController != null
+                && __instance._enemyController.IsAnyEnemyHitWindowOpen();
+
+            if (hitDatas != null)
+            {
+                foreach (var hit in hitDatas)
+                {
+                    if (hit.Enemy == null)
+                        continue;
+
+                    var sprite = hit.Enemy.SpriteRenderer != null
+                        ? hit.Enemy.SpriteRenderer.sprite
+                        : hit.Enemy.GetComponentInChildren<SpriteRenderer>()?.sprite;
+                    RunSessionStore.RememberEnemyVisual(
+                        hit.TargetBeat,
+                        hit.Enemy.DisplayName,
+                        hit.Enemy.EnemyTypeId,
+                        sprite);
+                }
+            }
+
             if (hitDatas == null || hitDatas.Count == 0)
             {
                 float inputBeat = __instance.BeatmapPlayer?.FmodTimeCapsule.TrueBeatNumber ?? 0f;
-                if (inputBeat > 0f)
+                if (inputBeat <= 0f)
+                    return;
+
+                var kind = ProcessHitClassification.ClassifyEmptySwing(positionCount, anyWindowOpen);
+                if (kind == ProcessHitClassification.EmptySwingKind.MissVertical)
+                    DivergenceLiveHarvest.TryAppendMissVertical(inputBeat);
+                else
                     DivergenceLiveHarvest.TryAppendOverhit(inputBeat);
                 return;
             }
@@ -84,12 +114,25 @@ internal static class ResultsDivergencePatches
                 if (hit.InputRating != InputRating.Miss)
                     continue;
 
+                string enemyName = hit.Enemy?.DisplayName;
+                int typeId = hit.Enemy != null ? hit.Enemy.EnemyTypeId : 0;
                 DivergenceLiveHarvest.TryAppendFailure(
                     hit.TargetBeat,
                     hit.RatingPercent,
                     hit.InputBeat,
                     hit.TargetBeat,
-                    PlotHitRating.Miss);
+                    PlotHitRating.Miss,
+                    PlotMarkerKind.Dot,
+                    enemyName,
+                    typeId);
+            }
+
+            if (ProcessHitClassification.IsPartialMiss(hitDatas.Count, positionCount)
+                && anyWindowOpen)
+            {
+                float inputBeat = __instance.BeatmapPlayer?.FmodTimeCapsule.TrueBeatNumber ?? 0f;
+                if (inputBeat > 0f)
+                    DivergenceLiveHarvest.TryAppendMissVertical(inputBeat);
             }
         }
         catch (Exception ex)
@@ -201,15 +244,18 @@ internal static class ResultsDivergencePatches
             var ratings = view._accuracyBar?._ratingsDefinition
                 ?? stage?._stageInputRecord?._inputRatingsDefinition;
             int truePerfectMin = DivergenceTimingBinsHarvest.ReadTruePerfectMinimum(ratings);
+            var vibeSpans = VibeActivationHarvest.FromRecord(stage?._stageInputRecord, totalBeats);
+            var vibeStats = VibeWindowStats.Compute(vibeSpans, hits);
             var context = new PlotRenderContext(
                 hits,
                 spans,
-                VibeActivationHarvest.FromRecord(stage?._stageInputRecord, totalBeats),
+                vibeSpans,
                 totalBeats,
                 Plugin.ResultsDivergencePlotOpacityPercent,
                 DivergenceTimingBinsHarvest.FromRatings(ratings),
                 DivergenceTimingBins.SuperCritMagnitude(truePerfectMin),
-                view._accuracyBar);
+                view._accuracyBar,
+                vibeStats);
             var raw = DivergencePlotRenderer.Build(
                 plotParent,
                 context,

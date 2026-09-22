@@ -15,7 +15,8 @@ internal sealed class PlotRenderContext
         int opacityPercent,
         IReadOnlyList<float> timingBinMagnitudes,
         float superCritBinMagnitude,
-        AccuracyBar stockColorSource)
+        AccuracyBar stockColorSource,
+        IReadOnlyList<VibeWindowStat> vibeStats = null)
     {
         Hits = hits ?? Array.Empty<HitDivergenceSample>();
         WorstSpans = worstSpans ?? Array.Empty<PracticeSpan>();
@@ -25,11 +26,13 @@ internal sealed class PlotRenderContext
         TimingBinMagnitudes = timingBinMagnitudes ?? Array.Empty<float>();
         SuperCritBinMagnitude = superCritBinMagnitude;
         StockColorSource = stockColorSource;
+        VibeStats = vibeStats ?? Array.Empty<VibeWindowStat>();
     }
 
     internal IReadOnlyList<HitDivergenceSample> Hits { get; }
     internal IReadOnlyList<PracticeSpan> WorstSpans { get; }
     internal IReadOnlyList<ChartBeatSpan> VibeSpans { get; }
+    internal IReadOnlyList<VibeWindowStat> VibeStats { get; }
     internal float TotalBeats { get; }
     internal int OpacityPercent { get; }
     internal IReadOnlyList<float> TimingBinMagnitudes { get; }

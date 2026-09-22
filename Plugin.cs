@@ -37,7 +37,13 @@ public class Plugin : RiftPlugin
         "RandomSong",
         "RandomKey",
         KeyCode.J,
-        "Title list: jukebox-scroll to a random playable song and start (skip loadout).");
+        "Title list: jukebox-scroll to a random playable song.");
+
+    internal static readonly Setting<bool> RandomSongOpenLoadout = new(
+        "RandomSong",
+        "RandomSongOpenLoadout",
+        false,
+        "After jukebox land: open the stock loadout (play menu) instead of starting the stage immediately.");
 
     internal static readonly Setting<bool> LazyCustomTracksEnabled = new(
         "LazyCustomTracks",
@@ -143,6 +149,8 @@ public class Plugin : RiftPlugin
 
     /// <summary>Master + feature gate for random song.</summary>
     internal static bool IsRandomSongActive => Enabled && RandomSongEnabled;
+    internal static bool RandomSongShouldOpenLoadout =>
+        RandomSongPlayPolicy.ShouldOpenLoadout(RandomSongOpenLoadout);
 
     /// <summary>Master + feature gate for Workshop autoscan overlay.</summary>
     internal static bool IsWorkshopAutoScanActive => Enabled && WorkshopAutoScanEnabled;
@@ -207,7 +215,7 @@ public class Plugin : RiftPlugin
         var patchInfo = update != null ? Harmony.GetPatchInfo(update) : null;
         var postfixCount = patchInfo?.Postfixes?.Count ?? 0;
         Logger.LogInfo(
-            $"{MyPluginInfo.PLUGIN_GUID} ready — RandomSong={RandomSongEnabled.Entry.Value} key={RandomSongKey.Entry.Value}; LazyCustomTracks={LazyCustomTracksEnabled.Entry.Value}; WorkshopAutoScan={WorkshopAutoScanEnabled.Entry.Value}; SkipBootIntro={SkipBootIntroEnabled.Entry.Value}; FieldOpacity={FieldOpacityEnabled.Entry.Value}/{FieldOpacityPercent}; TrackSets cap={MaxSubscribedTracksValue}; DivergencePlot={ResultsDivergencePlotEnabled.Entry.Value} key={ResultsDivergenceToggleKey.Entry.Value} opacity={ResultsDivergencePlotOpacityPercent}; WorstPractice={WorstSectionPracticeEnabled.Entry.Value} (TrackSelection.Update postfixes={postfixCount})");
+            $"{MyPluginInfo.PLUGIN_GUID} ready — RandomSong={RandomSongEnabled.Entry.Value} key={RandomSongKey.Entry.Value} openLoadout={RandomSongOpenLoadout.Entry.Value}; LazyCustomTracks={LazyCustomTracksEnabled.Entry.Value}; WorkshopAutoScan={WorkshopAutoScanEnabled.Entry.Value}; SkipBootIntro={SkipBootIntroEnabled.Entry.Value}; FieldOpacity={FieldOpacityEnabled.Entry.Value}/{FieldOpacityPercent}; TrackSets cap={MaxSubscribedTracksValue}; DivergencePlot={ResultsDivergencePlotEnabled.Entry.Value} key={ResultsDivergenceToggleKey.Entry.Value} opacity={ResultsDivergencePlotOpacityPercent}; WorstPractice={WorstSectionPracticeEnabled.Entry.Value} (TrackSelection.Update postfixes={postfixCount})");
     }
 
     protected override void OnUnload()
