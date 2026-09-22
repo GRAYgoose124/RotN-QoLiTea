@@ -1,120 +1,56 @@
 # QoLiTea
 
-Rift of the NecroDancer BepInEx 5 quality-of-life bundle.
+Quality-of-life bundle for [Rift of the NecroDancer](https://store.steampowered.com/app/2073250) (BepInEx 5).
 
-Plugin GUID: `rotn.dimethyltea.QoLiTea` (config: `BepInEx/config/rotn.dimethyltea.QoLiTea.cfg`).
+Requires **[Rift of the NecroManager](https://github.com/96-LB/RiftOfTheNecroManager)**. Config lives in `BepInEx/config/rotn.dimethyltea.QoLiTea.cfg` and in NecroManager’s Mods menu.
 
-## Features
+## What’s in it
 
-### Random song
+**Jukebox (J)** — On the official or Custom Music list, pick a random playable track, scroll to it, and start at your current difficulty. Optionally open the loadout instead of auto-playing (`RandomSongOpenLoadout`).
 
-On the **official** or **Custom Music** title list, press the random key (default **J**):
+**Lazy Custom Tracks** — Custom Music opens from a disk cache and refreshes in the background, so big Workshop libraries don’t stall the menu. Workshop installs and local folder changes update the open list without a full rescan. Clear cache via NecroManager `RunClearTrackListCache` if something looks stuck.
 
-1. If every folder is closed, opens them all so the pool is the full viewable list (skips promo / tutorial / locked / filler).
-2. Picks a true random eligible track (avoids the current song and a short recent-history bag).
-3. Scrolls toward that track (speed scales with list size; hard brake to a dead stop). On huge lists the spin is capped for snappiness, then the highlight snaps to the real pick.
-4. Starts the stage with the difficulty you already had selected - skips the loadout screen (or opens the stock loadout if **RandomSongOpenLoadout** is on).
+**Workshop AutoScan** — Opening Custom Music scans recent Workshop publishes. New charts show in an overlay (keyboard/gamepad): select what to sub, **A** to auto-sub an author forever. Turn off `WorkshopAutoScanAutoOpen` to scan silently and open the stash with **N** (toasts when there’s nothing new).
 
-### Lazy Custom Tracks
+**Skip Boot Intro** — After load, skip splash / forced calibration / intro / press-any-key and land on the real main menu.
 
-Speeds up the Custom Music menu with a persistent disk cache and background refresh. (For when loading takes a while and you have many workshop items.)
+**Field Opacity** — Fade lane tiles only (`0`–`100`). Enemies and strings stay stock. Off by default.
 
-1. Restores the last display list across restarts, including per-difficulty intensity/BPM so stock list folders do not dump tracks into Unknowns.
-2. Serves cache immediately on open; reconciles in the background; writes disk only if the result diverges. Old caches missing folder fields get one full reconcile.
-3. Workshop install/unsub and local folder add/remove update the open list without a full rescan. Warm-open also re-reads local `info.json` so new difficulties appear in Easy/Medium folders.
-4. Select/submit sync-hydrates from disk (not only cold stubs), so local `info.json` difficulty edits show after reopening the track — no full restart needed.
+**Track sets (NecroManager)** — Cap Workshop subs (`RunBulkUnsubscriber`), drop non-favorites without Impossible (`RunUnsubNoImpossible`), or re-sub archived sets (`OpenSetSubscriber`). Removals are archived so you can restore them.
 
-**Clear cache:** NecroManager `RunClearTrackListCache` (one-shot) deletes `track-list-cache.json` and kicks a full reconcile if Custom Music is already open.
+**Results divergence plot** — Timing scatter on the results screen (center = perfect; early/late marked). Gold bands for vibe windows; misses and overhits as vertical marks. **G** toggles; double-tap **G** for fullscreen. Doesn’t replace the stock histogram.
 
-Cache file: `BepInEx/config/rotn.dimethyltea.QoLiTea/track-list-cache.json`.
+**Practice worst sections** — Results **Auto** option that chains stock practice across your worst spans (off by default).
 
-### Workshop AutoScan
+## Hotkeys
 
-On **Custom Music** open, checks recent Workshop publishes (community most-recent).
+| Where | Key | Does |
+|-------|-----|------|
+| Title list | **J** | Random song |
+| Custom Music | **N** | Open stashed Workshop AutoScan list |
+| Results | **G** | Toggle plot (double-tap = fullscreen) |
 
-1. Page 1 (30). If nothing new after seen/subscribed filter, digs pages 2–3 (stops when uniques appear; max 90).
-2. Authors you marked with **A** are silent-subscribed and skipped in the overlay.
-3. Overlay lists the rest (title + author). **Up/Down** move | **Confirm** toggles select | **A** auto-sub that author (all their rows in this list + future scans) | **Cancel** closes and subscribes the selected set. Keyboard/gamepad only (no mouse).
-4. Focused row: author + thumbnail on the right, workshop description underneath (lazy fetch). Focusing marks seen (**S** on the row; first song gets **S** on open). Already-subscribed items are skipped. Lazy Custom Tracks picks up installs via live deltas.
-5. **WorkshopAutoScanAutoOpen** (default on): pop the overlay after scan. Off = scan + silent auto-sub still run; press **WorkshopAutoScanKey** (default **N**) to open the stashed list (toast **No new items** / **Scanning…** when there is nothing to open).
+## Settings cheat sheet
 
-Seen: `BepInEx/config/rotn.dimethyltea.QoLiTea/workshop-autoscan-seen.json`  
-Auto-sub authors: `BepInEx/config/rotn.dimethyltea.QoLiTea/workshop-autoscan-authors.json`.
+Most toggles are on by default. Notable defaults / one-shots:
 
-### Skip Boot Intro
-
-On game start, after startup loading finishes, jumps past splash logos/video, forced boot calibration, intro cinematic, and the press-any-key title screen - straight to the real main menu. Splash still covers load time if the game is still loading.
-
-### Field Opacity
-
-Lane/field **tiles** only: set opacity `0`–`100` (`100` = stock opaque, `0` = invisible). Enemies, arrows, and guitar strings stay stock. Change takes effect on the next stock tile alpha pass (usually stage fade-in / column changes).
-
-### Bulk Unsubscriber / Set Subscriber
-
-NecroManager one-shots under **TrackSets**.
-
-**Bulk Unsubscriber** (`RunBulkUnsubscriber`): trims workshop subs to `MaxSubscribedTracks` (default **1000**). Drops least-recently-played first, then fewest plays. Never unsubs favorites or 0-play tracks. Preview Confirm/Cancel; always archives removals into a set (`unsub-yyyy-MM-dd-HHmm`).
-
-**Unsub No-Impossible** (`RunUnsubNoImpossible`): unsubs non-favorite tracks that lack an Impossible chart (from Lazy Custom Tracks cache / metadata). Skips favorites and unknown difficulty data. Archives to `unsub-noimp-…`.
-
-**Set Subscriber** (`OpenSetSubscriber`): multi-select saved sets; Enter subscribes the union (additive only). Sets file: `BepInEx/config/rotn.dimethyltea.QoLiTea/track-sets.json`. Updates the Lazy Custom Tracks cache from Steam after unsub/subscribe.
-
-### Results divergence plot
-
-On the **results screen**, draws a scatter plot of signed timing divergence from on-beat perfect (center line = perfect; **E** top / **L** bottom mark early vs late). Gold bands mark **activated vibe-power** windows (not chart vibe monsters); fullscreen captions show per-vibe hit count and first→last monster names. Timed hits are colored dots; untimed misses (timeouts / no player press) are red verticals — not edge-stacked dots from stock’s synthetic after-window beat; true overhits are pink verticals. Full width along the bottom by default; **double-tap G** for opaque fullscreen (timing-bin guide lines + gold super-crit bin); **G** or **Esc** closes. Default **90%** docked opacity via `PlotOpacity`. Does not replace the stock results histogram.
-
-### Practice worst sections
-
-When worst sections are found and stock Practice is available, adds an **Auto** results menu option (registered in the scrollable option list, after Retry). One stock practice window from the **start of the first** worst section through the **end of the last**. At each section boundary, mid-run **FMOD seek + chart skip** with 8-beat warm-up prep and enemy clear (no full scene reload between sections). After the last section, stock `CompleteStage` runs normally.
-
-## Settings
-
-| Key | Default | Meaning |
-|-----|---------|---------|
-| **Enabled** | true | Master toggle - all features off when false. |
-| **RandomSongEnabled** | true | Jukebox random song. |
-| **RandomKey** | J | Hotkey for random song (title list only). |
-| **RandomSongOpenLoadout** | false | After jukebox: open loadout instead of auto-start. |
-| **LazyCustomTracksEnabled** | true | Custom Music lazy load / cache. |
-| **RunClearTrackListCache** | false | One-shot: clear track list cache. |
-| **WorkshopAutoScanEnabled** | true | Custom Music: new Workshop publish overlay. |
-| **WorkshopAutoScanAutoOpen** | true | Auto-open overlay after scan (off = use hotkey). |
-| **WorkshopAutoScanKey** | N | Custom Music: open stashed new Workshop list. |
-| **SkipBootIntroEnabled** | true | Skip splash media / forced boot calib / intro cinematic / title screen. |
-| **FieldOpacityEnabled** | false | Scale lane/field tile opacity. |
-| **FieldOpacity** | 100 | Tile opacity percent (`0` = invisible, `100` = stock). |
-| **BulkUnsubscriberEnabled** | true | Cap-trim + No-Impossible unsub tools. |
-| **MaxSubscribedTracks** | 1000 | Bulk Unsubscriber subscription cap. |
-| **RunBulkUnsubscriber** | false | One-shot: open Bulk Unsubscriber confirm. |
-| **RunUnsubNoImpossible** | false | One-shot: unsub tracks without Impossible. |
-| **SetSubscriberEnabled** | true | Set Subscriber picker. |
-| **OpenSetSubscriber** | false | One-shot: open Set Subscriber. |
-| **ResultsDivergencePlotEnabled** | true | Results scatter plot of timing divergence. |
-| **ToggleKey** | G | Results screen: toggle plot visibility; double tap keybind for fullscreen. |
-| **PlotOpacity** | 90 | Plot opacity percent (`80` = 20% transparent). |
-| **WorstSectionPracticeEnabled** | true | Detect spans + Auto button / jumper. |
-
-Also available under NecroManager’s in-game Mods settings menu.
+| Setting | Default | Notes |
+|---------|---------|--------|
+| `Enabled` | on | Master kill switch |
+| `RandomSongOpenLoadout` | off | Land on loadout instead of auto-start |
+| `WorkshopAutoScanAutoOpen` | on | Off → use **N** after scan |
+| `FieldOpacityEnabled` | off | Then set `FieldOpacity` percent |
+| `WorstSectionPracticeEnabled` | off | Adds **Auto** on results |
+| `MaxSubscribedTracks` | 1000 | Bulk Unsubscriber cap |
+| `RunClearTrackListCache` / `RunBulkUnsubscriber` / `RunUnsubNoImpossible` / `OpenSetSubscriber` | off | NecroManager one-shots (flip once) |
 
 ## Build from source
 
-Requires a Rift install with **BepInEx 5**, **[Rift of the NecroManager](https://github.com/96-LB/RiftOfTheNecroManager)** in `BepInEx/plugins`, and the [.NET SDK](https://dotnet.microsoft.com/download) (`dotnet` on your PATH).
+Needs a Rift install with BepInEx 5, NecroManager in `BepInEx/plugins`, and the .NET SDK.
 
-1. In `QoLiTea.csproj`, set `$(GameManaged)` to your game’s `…/RiftOfTheNecroDancer_Data/Managed` folder (the default path is my Steam install). You can also pass it on the command line: `-p:GameManaged="D:\path\to\Managed"`.
+1. Point `GameManaged` in `QoLiTea.csproj` (or `-p:GameManaged=…`) at your game’s `Managed` folder.
 2. Put a publicized `Assembly-CSharp` at `lib/RiftReadable.dll`.
-
-   ```bash
-   /a/Projects/rift-mods/scripts/regen_publicized_assembly.sh \
-     /a/SteamLibrary/steamapps/common/RiftOfTheNecroDancerOSTVolume1/RiftOfTheNecroDancer_Data/Managed/Assembly-CSharp \
-     /a/Projects/rift-mods/mods/QoLiTea/lib
-   ```
-
-3. Point `$(GamePlugins)` at your `BepInEx/plugins` folder if needed so the build can reference `RiftOfTheNecroManager.dll` (`Private=false` - not copied beside this mod).
-4. Build and install:
-
-```bash
-dotnet build -c Release
-# then copy bin/Release/netstandard2.1/QoLiTea.dll ; <game>/BepInEx/plugins/
-```
+3. Point `GamePlugins` at `BepInEx/plugins` so the build can reference NecroManager.
+4. `dotnet build -c Release` → copy `bin/Release/netstandard2.1/QoLiTea.dll` into plugins.
 
 Optional: `dotnet test QoLiTea.Tests/QoLiTea.Tests.csproj`
