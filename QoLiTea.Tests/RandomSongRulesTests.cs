@@ -67,6 +67,69 @@ public class RandomSongRulesTests
     }
 
     [Fact]
+    public void PickTargetIndex_skips_excluded_indices_when_others_remain()
+    {
+        var eligible = new List<int> { 2, 5, 9, 12 };
+        var excluded = new HashSet<int> { 5, 9 };
+        var pick = RandomSongRules.PickTargetIndex(
+            eligible,
+            currentIndex: 2,
+            nextExclusive: n =>
+            {
+                Assert.Equal(1, n); // only 12 left (2 is current)
+                return 0;
+            },
+            excludedIndices: excluded);
+        Assert.Equal(12, pick);
+    }
+
+    [Fact]
+    public void PickTargetIndex_falls_back_when_exclusions_empty_the_non_current_pool()
+    {
+        var eligible = new List<int> { 2, 5, 9 };
+        var excluded = new HashSet<int> { 5, 9 };
+        // All non-current excluded → fall back to non-current-only (ignore exclusions).
+        var pick = RandomSongRules.PickTargetIndex(
+            eligible,
+            currentIndex: 2,
+            nextExclusive: n =>
+            {
+                Assert.Equal(2, n);
+                return 0;
+            },
+            excludedIndices: excluded);
+        Assert.Equal(5, pick);
+    }
+
+    [Fact]
+    public void CapScrollForTheater_preserves_direction_and_clamps_track_steps()
+    {
+        var plan = new RandomSongRules.ScrollPlan(direction: 1, visualSteps: 16, trackSteps: 400);
+        var capped = RandomSongRules.CapScrollForTheater(plan, maxTrackSteps: 56);
+        Assert.Equal(1, capped.Direction);
+        Assert.Equal(56, capped.TrackSteps);
+        Assert.Equal(RandomSongRules.MaxVisualJukeboxSteps, capped.VisualSteps);
+    }
+
+    [Fact]
+    public void CapScrollForTheater_leaves_short_plans_unchanged()
+    {
+        var plan = new RandomSongRules.ScrollPlan(direction: -1, visualSteps: 10, trackSteps: 40);
+        var capped = RandomSongRules.CapScrollForTheater(plan, maxTrackSteps: 56);
+        Assert.Equal(-1, capped.Direction);
+        Assert.Equal(40, capped.TrackSteps);
+        Assert.Equal(10, capped.VisualSteps);
+    }
+
+    [Fact]
+    public void RecentHistoryCap_is_min_of_pool_minus_one_and_32()
+    {
+        Assert.Equal(0, RandomSongRules.RecentHistoryCap(eligibleCount: 1));
+        Assert.Equal(4, RandomSongRules.RecentHistoryCap(eligibleCount: 5));
+        Assert.Equal(32, RandomSongRules.RecentHistoryCap(eligibleCount: 1000));
+    }
+
+    [Fact]
     public void ChooseDirectionOnRing_picks_shortest_wrap()
     {
         Assert.Equal(1, RandomSongRules.ChooseDirectionOnRing(fromPos: 0, toPos: 2, ringCount: 10));
@@ -212,9 +275,16 @@ public class RandomSongRulesTests
     }
 
     [Fact]
-    public void MaxTrackStepsPerRoll_is_below_huge_custom_shortest_paths()
+    public void MaxTrackStepsPerRoll_is_animation_budget_not_pick_bias()
     {
+        // Cap is for theatrical scroll only — far picks still keep their true target.
         Assert.True(RandomSongRules.MaxTrackStepsPerRoll < 200);
         Assert.True(RandomSongRules.MaxTrackStepsPerRoll >= RandomSongRules.DefaultMinJukeboxSteps);
+        var far = RandomSongRules.PlanScrollToTarget(
+            fromPos: 0, toPos: 400, ringCount: 1000, minSteps: 8);
+        Assert.True(far.TrackSteps > RandomSongRules.MaxTrackStepsPerRoll);
+        var theater = RandomSongRules.CapScrollForTheater(far, RandomSongRules.MaxTrackStepsPerRoll);
+        Assert.Equal(RandomSongRules.MaxTrackStepsPerRoll, theater.TrackSteps);
+        Assert.Equal(far.Direction, theater.Direction);
     }
 }

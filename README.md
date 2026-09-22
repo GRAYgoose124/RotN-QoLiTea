@@ -11,8 +11,9 @@ Plugin GUID: `rotn.dimethyltea.QoLiTea` (config: `BepInEx/config/rotn.dimethylte
 On the **official** or **Custom Music** title list, press the random key (default **J**):
 
 1. If every folder is closed, opens them all so the pool is the full viewable list (skips promo / tutorial / locked / filler).
-2. Scrolls to that track (speed scales with list size; hard brake to a dead stop on the pick).
-3. Starts the stage with the difficulty you already had selected - skips the loadout screen.
+2. Picks a true random eligible track (avoids the current song and a short recent-history bag).
+3. Scrolls toward that track (speed scales with list size; hard brake to a dead stop). On huge lists the spin is capped for snappiness, then the highlight snaps to the real pick.
+4. Starts the stage with the difficulty you already had selected - skips the loadout screen.
 
 ### Lazy Custom Tracks
 

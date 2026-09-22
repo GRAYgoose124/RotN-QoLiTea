@@ -48,12 +48,14 @@ internal static class TrackListGate
 }
 
 /// <summary>
-/// Jukebox-scroll (±1) over the navigable ring only, then start (skip loadout).
+/// Jukebox: true global pick, capped theatrical ±1 scroll, snap via RefreshTrackData when far.
 /// </summary>
 internal sealed class RandomSongDriver
 {
     private readonly MonoBehaviour _host;
     private Coroutine _running;
+    private readonly Queue<string> _recentLevelIds = new();
+    private readonly HashSet<string> _recentLevelIdSet = new(StringComparer.Ordinal);
 
     public RandomSongDriver(MonoBehaviour host)
     {
@@ -87,6 +89,64 @@ internal sealed class RandomSongDriver
         _running = null;
     }
 
+    private void RememberLevelId(string levelId, int eligibleCount)
+    {
+        if (string.IsNullOrEmpty(levelId))
+            return;
+
+        var cap = RandomSongRules.RecentHistoryCap(eligibleCount);
+        if (cap <= 0)
+            return;
+
+        if (_recentLevelIdSet.Add(levelId))
+            _recentLevelIds.Enqueue(levelId);
+
+        while (_recentLevelIds.Count > cap)
+        {
+            var old = _recentLevelIds.Dequeue();
+            _recentLevelIdSet.Remove(old);
+        }
+    }
+
+    private HashSet<int> BuildExcludedIndices(
+        IList<ITrackMetadata> metas,
+        List<int> eligibleIndices)
+    {
+        var excluded = new HashSet<int>();
+        if (_recentLevelIdSet.Count == 0 || metas == null || eligibleIndices == null)
+            return excluded;
+
+        for (var i = 0; i < eligibleIndices.Count; i++)
+        {
+            var idx = eligibleIndices[i];
+            if (idx < 0 || idx >= metas.Count)
+                continue;
+            var id = metas[idx]?.LevelId;
+            if (!string.IsNullOrEmpty(id) && _recentLevelIdSet.Contains(id))
+                excluded.Add(idx);
+        }
+
+        return excluded;
+    }
+
+    private static void SnapSelectionToIndex(
+        BaseTrackSelectionOptionGroup group,
+        IList<ITrackMetadata> metas,
+        int targetIndex,
+        Shared.Difficulty selectedDifficulty)
+    {
+        if (group == null || metas == null || metas.Count == 0)
+            return;
+        if (targetIndex < 0 || targetIndex >= metas.Count)
+            return;
+
+        var arr = new ITrackMetadata[metas.Count];
+        for (var i = 0; i < metas.Count; i++)
+            arr[i] = metas[i];
+
+        group.RefreshTrackData(arr, targetIndex, selectedDifficulty);
+    }
+
     private IEnumerator RunOfficial(TrackSelectionSceneController controller)
     {
         var disabledInput = false;
@@ -107,6 +167,10 @@ internal sealed class RandomSongDriver
                 afterLand: (elig, indices) =>
                 {
                     disabledInput = false;
+                    var metas = group._trackMetaData;
+                    var sid = group._selectedTrackIndex;
+                    if (metas != null && sid >= 0 && sid < metas.Count)
+                        RememberLevelId(metas[sid]?.LevelId, indices?.Count ?? 0);
                     return controller.GoToSelectedStageCoroutine();
                 },
                 setInputDisabled: v =>
@@ -166,7 +230,7 @@ internal sealed class RandomSongDriver
     /// without opening the loadout. If the landed stub lied about difficulty availability,
     /// jump to another eligible track and retry (no long re-scroll).
     /// </summary>
-    private static IEnumerator GoToCustomStageSkippingLoadout(
+    private IEnumerator GoToCustomStageSkippingLoadout(
         CustomTracksSelectionSceneController controller,
         BaseTrackSelectionOptionGroup group,
         List<bool> eligible,
@@ -272,6 +336,7 @@ internal sealed class RandomSongDriver
                 && !string.IsNullOrEmpty(controller._submittedTrackDifficulty.BeatmapFilePath))
             {
                 Plugin.Logger?.LogInfo($"QoLiTea: starting custom stage {levelId}");
+                RememberLevelId(levelId, eligibleIndices.Count);
                 controller.GoToSelectedStage();
                 yield break;
             }
@@ -459,10 +524,12 @@ internal sealed class RandomSongDriver
             }
         }
 
+        var excluded = BuildExcludedIndices(metas, trackRing);
         var target = RandomSongRules.PickTargetIndex(
             trackRing,
             group._selectedTrackIndex,
-            n => UnityEngine.Random.Range(0, n));
+            n => UnityEngine.Random.Range(0, n),
+            excluded);
         if (target == null)
         {
             Plugin.Logger?.LogWarning("QoLiTea: pick failed");
@@ -482,36 +549,35 @@ internal sealed class RandomSongDriver
         var plan = RandomSongRules.PlanScrollToTarget(
             fromPos, toPos, trackRing.Count, RandomSongRules.DefaultMinJukeboxSteps);
 
-        // ±1-only navigation can't cover hundreds of tracks in budget — retarget to where
-        // the capped roll will actually land so the dead-stop song is the one that starts.
-        if (plan.TrackSteps > RandomSongRules.MaxTrackStepsPerRoll)
+        // Cap theatrical scroll only — keep the true pick and snap after if far.
+        var needsSnap = plan.TrackSteps > RandomSongRules.MaxTrackStepsPerRoll;
+        plan = RandomSongRules.CapScrollForTheater(plan, RandomSongRules.MaxTrackStepsPerRoll);
+
+        var scrollTarget = target.Value;
+        if (needsSnap)
         {
-            var cappedPos = RandomSongRules.LandRingPos(
-                fromPos, plan.Direction, RandomSongRules.MaxTrackStepsPerRoll, trackRing.Count);
-            target = trackRing[cappedPos];
-            toPos = cappedPos;
-            plan = new RandomSongRules.ScrollPlan(
-                plan.Direction,
-                Math.Min(plan.VisualSteps, RandomSongRules.MaxVisualJukeboxSteps),
-                RandomSongRules.MaxTrackStepsPerRoll);
+            var theaterLand = RandomSongRules.LandRingPos(
+                fromPos, plan.Direction, plan.TrackSteps, trackRing.Count);
+            scrollTarget = trackRing[theaterLand];
         }
 
         var budget = RandomSongRules.TargetScrollSeconds(trackRing.Count, plan.VisualSteps);
         var landName = metas[target.Value]?.TrackName ?? "?";
         Plugin.Logger?.LogInfo(
-            $"QoLiTea: pick [{target.Value}] {landName} — visual={plan.VisualSteps} tracks={plan.TrackSteps} dir={plan.Direction} budget={budget:0.00}s (from {group._selectedTrackIndex})");
+            $"QoLiTea: pick [{target.Value}] {landName} — visual={plan.VisualSteps} tracks={plan.TrackSteps} dir={plan.Direction} budget={budget:0.00}s snap={needsSnap} (from {group._selectedTrackIndex})");
 
         yield return ScrollToIndex(
-            group, eligible, plan.Direction, plan.VisualSteps, plan.TrackSteps, budget, target.Value);
+            group, eligible, plan.Direction, plan.VisualSteps, plan.TrackSteps, budget, scrollTarget);
 
         if (group == null || !group.isActiveAndEnabled)
             yield break;
 
         if (group._selectedTrackIndex != target.Value)
         {
-            Plugin.Logger?.LogWarning(
-                $"QoLiTea: selection {group._selectedTrackIndex} ≠ pick {target.Value}; snapping");
-            yield return JumpSelectionToIndex(group, eligible, target.Value);
+            Plugin.Logger?.LogInfo(
+                $"QoLiTea: snap selection {group._selectedTrackIndex} → pick {target.Value}");
+            SnapSelectionToIndex(group, metas, target.Value, selectedDifficulty);
+            yield return WaitHold(group, RandomSongRules.DeadStopHoldSeconds);
         }
 
         if (!IsPlayableSelection(group, metas, selectedDifficulty, isLocked))

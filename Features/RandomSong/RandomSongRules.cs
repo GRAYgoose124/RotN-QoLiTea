@@ -12,10 +12,13 @@ public static class RandomSongRules
     /// <summary>Hard cap on UI ticks so a 1000-track custom list still finishes in budget.</summary>
     public const int MaxVisualJukeboxSteps = 16;
     /// <summary>
-    /// Max eligible ±1 NavigateTrackList steps per roll. Stock UI desyncs if we jump by more
-    /// than ±1 per call; this keeps long lists snappy without teleporting the highlight.
+    /// Max eligible ±1 NavigateTrackList steps for the theatrical scroll only.
+    /// Far picks keep their true target and snap after this budget (stock RefreshTrackData).
+    /// Stock UI desyncs if we jump by more than ±1 per NavigateTrackList call.
     /// </summary>
     public const int MaxTrackStepsPerRoll = 56;
+    /// <summary>Hard ceiling for the session recent-LevelId bag.</summary>
+    public const int MaxRecentHistory = 32;
     /// <summary>Last visual ticks are always single-track for the dead-stop feel.</summary>
     public const int SettleVisualSteps = 3;
     /// <summary>
@@ -138,12 +141,26 @@ public static class RandomSongRules
         => CollectEligibleIndices(navigableByIndex);
 
     /// <summary>
+    /// FIFO bag size for recent picks: <c>min(eligibleCount - 1, MaxRecentHistory)</c>.
+    /// </summary>
+    public static int RecentHistoryCap(int eligibleCount)
+    {
+        if (eligibleCount <= 1)
+            return 0;
+        var cap = eligibleCount - 1;
+        return cap > MaxRecentHistory ? MaxRecentHistory : cap;
+    }
+
+    /// <summary>
     /// Picks a random eligible index. Prefer not current when other choices exist.
+    /// Optional <paramref name="excludedIndices"/> (recent history) are skipped when
+    /// enough other choices remain; if they empty the non-current pool, exclusions are ignored.
     /// </summary>
     public static int? PickTargetIndex(
         IReadOnlyList<int> eligibleIndices,
         int currentIndex,
-        Func<int, int> nextExclusive)
+        Func<int, int> nextExclusive,
+        IReadOnlyCollection<int> excludedIndices = null)
     {
         if (eligibleIndices == null || eligibleIndices.Count == 0 || nextExclusive == null)
             return null;
@@ -159,12 +176,68 @@ public static class RandomSongRules
                 others.Add(idx);
         }
 
-        IReadOnlyList<int> pool = others.Count > 0 ? others : eligibleIndices;
+        if (others.Count == 0)
+            return PickFromPool(eligibleIndices, nextExclusive);
+
+        if (excludedIndices != null && excludedIndices.Count > 0)
+        {
+            var filtered = new List<int>(others.Count);
+            for (var i = 0; i < others.Count; i++)
+            {
+                var idx = others[i];
+                if (!ContainsIndex(excludedIndices, idx))
+                    filtered.Add(idx);
+            }
+
+            if (filtered.Count > 0)
+                return PickFromPool(filtered, nextExclusive);
+        }
+
+        return PickFromPool(others, nextExclusive);
+    }
+
+    private static bool ContainsIndex(IReadOnlyCollection<int> set, int index)
+    {
+        if (set is HashSet<int> hash)
+            return hash.Contains(index);
+        foreach (var v in set)
+        {
+            if (v == index)
+                return true;
+        }
+
+        return false;
+    }
+
+    private static int? PickFromPool(IReadOnlyList<int> pool, Func<int, int> nextExclusive)
+    {
+        if (pool == null || pool.Count == 0)
+            return null;
         var pick = nextExclusive(pool.Count);
         if (pick < 0 || pick >= pool.Count)
             return null;
-
         return pool[pick];
+    }
+
+    /// <summary>
+    /// Caps theatrical scroll distance without inventing a new landing index.
+    /// </summary>
+    public static ScrollPlan CapScrollForTheater(ScrollPlan plan, int maxTrackSteps)
+    {
+        if (maxTrackSteps < 1)
+            maxTrackSteps = 1;
+        if (plan.TrackSteps <= maxTrackSteps)
+            return plan;
+
+        var visual = plan.VisualSteps;
+        if (visual > MaxVisualJukeboxSteps)
+            visual = MaxVisualJukeboxSteps;
+        if (visual > maxTrackSteps)
+            visual = maxTrackSteps;
+        if (visual < 1)
+            visual = 1;
+
+        return new ScrollPlan(plan.Direction, visual, maxTrackSteps);
     }
 
     /// <summary>
