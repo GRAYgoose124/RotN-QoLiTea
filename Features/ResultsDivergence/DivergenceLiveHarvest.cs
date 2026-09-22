@@ -39,17 +39,18 @@ internal static class DivergenceLiveHarvest
         float inputBeat,
         float targetBeatForTiming,
         PlotHitRating rating,
-        string enemyDisplayName = null)
+        string enemyDisplayName = null,
+        bool wasPlayerInput = true)
     {
         bool wasEarly = inputBeat < targetBeatForTiming;
         PlotMarkerKind resolvedMarker;
         float signed;
-        if (rating == PlotHitRating.Miss)
+        if (rating == PlotHitRating.Miss || rating == PlotHitRating.ComboBreak)
         {
             resolvedMarker = SignedDivergenceRules.MarkerForMiss(
-                ratingPercent, inputBeat, targetBeatForTiming);
+                ratingPercent, inputBeat, targetBeatForTiming, wasPlayerInput);
             signed = SignedDivergenceRules.SignedForMiss(
-                ratingPercent, wasEarly, inputBeat, targetBeatForTiming);
+                ratingPercent, wasEarly, inputBeat, targetBeatForTiming, wasPlayerInput);
         }
         else
         {
@@ -110,24 +111,20 @@ internal static class DivergenceLiveHarvest
         PlotMarkerKind marker = PlotMarkerKind.Dot;
         if (plotRating == PlotHitRating.Miss || plotRating == PlotHitRating.ComboBreak)
         {
-            if (plotRating == PlotHitRating.Miss)
-            {
-                marker = SignedDivergenceRules.MarkerForMiss(
-                    ratingPercent, inputBeatNumber, targetBeatNumber);
-                signed = SignedDivergenceRules.SignedForMiss(
-                    ratingPercent,
-                    inputBeatNumber < targetBeatNumber,
-                    inputBeatNumber,
-                    targetBeatNumber);
-            }
-            else
-            {
-                signed = SignedDivergenceRules.ForFailure(
-                    ratingPercent,
-                    inputBeatNumber < targetBeatNumber,
-                    inputBeatNumber,
-                    targetBeatNumber);
-            }
+            // Timeout misses (wasPlayerInput=false) carry a synthetic after-window beat —
+            // MarkerForMiss treats those as untimed verticals, not aligned edge dots.
+            marker = SignedDivergenceRules.MarkerForMiss(
+                ratingPercent, inputBeatNumber, targetBeatNumber, wasPlayerInput);
+            signed = SignedDivergenceRules.SignedForMiss(
+                ratingPercent,
+                inputBeatNumber < targetBeatNumber,
+                inputBeatNumber,
+                targetBeatNumber,
+                wasPlayerInput);
+
+            // Plot timeouts as Miss (red vertical), not ComboBreak (pink overhit).
+            if (isMiss && !wasPlayerInput)
+                plotRating = PlotHitRating.Miss;
         }
         else
         {

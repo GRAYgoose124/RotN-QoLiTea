@@ -35,20 +35,41 @@ public static class SignedDivergenceRules
         return (early ? -1f : 1f) * mag;
     }
 
-    /// <summary>True when a miss has real early/late timing (not a synthetic ±100 fallback).</summary>
-    public static bool MissHasTiming(float ratingPercent, float inputBeat, float targetBeat)
-        => HasUsableRatingPercent(ratingPercent) || HasBeatTiming(inputBeat, targetBeat);
+    /// <summary>
+    /// True when a miss has real early/late timing (not a synthetic ±100 fallback).
+    /// Timeout / enemy-attack misses use <paramref name="wasPlayerInput"/> false and a synthetic
+    /// after-window beat — that must not count as timing.
+    /// </summary>
+    public static bool MissHasTiming(
+        float ratingPercent,
+        float inputBeat,
+        float targetBeat,
+        bool wasPlayerInput = true)
+    {
+        if (!wasPlayerInput)
+            return false;
+        return HasUsableRatingPercent(ratingPercent) || HasBeatTiming(inputBeat, targetBeat);
+    }
 
     /// <summary>Timed misses → dots; untimed misses → full-height verticals.</summary>
-    public static PlotMarkerKind MarkerForMiss(float ratingPercent, float inputBeat, float targetBeat)
-        => MissHasTiming(ratingPercent, inputBeat, targetBeat)
+    public static PlotMarkerKind MarkerForMiss(
+        float ratingPercent,
+        float inputBeat,
+        float targetBeat,
+        bool wasPlayerInput = true)
+        => MissHasTiming(ratingPercent, inputBeat, targetBeat, wasPlayerInput)
             ? PlotMarkerKind.Dot
             : PlotMarkerKind.VerticalLine;
 
     /// <summary>Signed Y for a miss marker; untimed verticals sit on the center line.</summary>
-    public static float SignedForMiss(float ratingPercent, bool wasEarly, float inputBeat, float targetBeat)
+    public static float SignedForMiss(
+        float ratingPercent,
+        bool wasEarly,
+        float inputBeat,
+        float targetBeat,
+        bool wasPlayerInput = true)
     {
-        if (!MissHasTiming(ratingPercent, inputBeat, targetBeat))
+        if (!MissHasTiming(ratingPercent, inputBeat, targetBeat, wasPlayerInput))
             return 0f;
         return ForFailure(ratingPercent, wasEarly, inputBeat, targetBeat);
     }

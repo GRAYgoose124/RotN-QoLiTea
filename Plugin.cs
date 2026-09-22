@@ -63,6 +63,18 @@ public class Plugin : RiftPlugin
         true,
         "Custom Music: show new Workshop publishes since last visit; toggle to subscribe.");
 
+    internal static readonly Setting<bool> WorkshopAutoScanAutoOpen = new(
+        "WorkshopAutoScan",
+        "WorkshopAutoScanAutoOpen",
+        true,
+        "Custom Music: auto-open the new Workshop overlay after scan (off = scan still runs; use hotkey).");
+
+    internal static readonly Setting<KeyCode> WorkshopAutoScanKey = new(
+        "WorkshopAutoScan",
+        "WorkshopAutoScanKey",
+        KeyCode.N,
+        "Custom Music: open stashed new Workshop list (after scan).");
+
     internal static readonly Setting<bool> SkipBootIntroEnabled = new(
         "SkipBootIntro",
         "SkipBootIntroEnabled",
@@ -195,6 +207,7 @@ public class Plugin : RiftPlugin
     private RandomSongDriver _randomSong;
     private bool _ready;
     private bool _keyHeld;
+    private bool _workshopAutoScanKeyHeld;
     private float _nextMissLogTime;
 
     protected override void OnInit()
@@ -215,7 +228,7 @@ public class Plugin : RiftPlugin
         var patchInfo = update != null ? Harmony.GetPatchInfo(update) : null;
         var postfixCount = patchInfo?.Postfixes?.Count ?? 0;
         Logger.LogInfo(
-            $"{MyPluginInfo.PLUGIN_GUID} ready — RandomSong={RandomSongEnabled.Entry.Value} key={RandomSongKey.Entry.Value} openLoadout={RandomSongOpenLoadout.Entry.Value}; LazyCustomTracks={LazyCustomTracksEnabled.Entry.Value}; WorkshopAutoScan={WorkshopAutoScanEnabled.Entry.Value}; SkipBootIntro={SkipBootIntroEnabled.Entry.Value}; FieldOpacity={FieldOpacityEnabled.Entry.Value}/{FieldOpacityPercent}; TrackSets cap={MaxSubscribedTracksValue}; DivergencePlot={ResultsDivergencePlotEnabled.Entry.Value} key={ResultsDivergenceToggleKey.Entry.Value} opacity={ResultsDivergencePlotOpacityPercent}; WorstPractice={WorstSectionPracticeEnabled.Entry.Value} (TrackSelection.Update postfixes={postfixCount})");
+            $"{MyPluginInfo.PLUGIN_GUID} ready — RandomSong={RandomSongEnabled.Entry.Value} key={RandomSongKey.Entry.Value} openLoadout={RandomSongOpenLoadout.Entry.Value}; LazyCustomTracks={LazyCustomTracksEnabled.Entry.Value}; WorkshopAutoScan={WorkshopAutoScanEnabled.Entry.Value} autoOpen={WorkshopAutoScanAutoOpen.Entry.Value} key={WorkshopAutoScanKey.Entry.Value}; SkipBootIntro={SkipBootIntroEnabled.Entry.Value}; FieldOpacity={FieldOpacityEnabled.Entry.Value}/{FieldOpacityPercent}; TrackSets cap={MaxSubscribedTracksValue}; DivergencePlot={ResultsDivergencePlotEnabled.Entry.Value} key={ResultsDivergenceToggleKey.Entry.Value} opacity={ResultsDivergencePlotOpacityPercent}; WorstPractice={WorstSectionPracticeEnabled.Entry.Value} (TrackSelection.Update postfixes={postfixCount})");
     }
 
     protected override void OnUnload()
@@ -224,6 +237,20 @@ public class Plugin : RiftPlugin
         _randomSong?.Cancel();
         _randomSong = null;
         Instance = null;
+    }
+
+    /// <summary>
+    /// Custom Music: open stashed Workshop AutoScan list (no re-scan).
+    /// </summary>
+    internal void TryWorkshopAutoScanHotkey(CustomTracksSelectionSceneController controller)
+    {
+        if (!_ready || !IsWorkshopAutoScanActive || controller == null)
+            return;
+
+        if (!TryConsumeKeyEdge(ref _workshopAutoScanKeyHeld, WorkshopAutoScanKey))
+            return;
+
+        WorkshopAutoScanController.TryOpenStashFromHotkey(controller);
     }
 
     /// <summary>
@@ -299,6 +326,8 @@ public class Plugin : RiftPlugin
             if (keyCode == KeyCode.J && keyboard.jKey.isPressed)
                 return true;
             if (keyCode == KeyCode.G && keyboard.gKey.isPressed)
+                return true;
+            if (keyCode == KeyCode.N && keyboard.nKey.isPressed)
                 return true;
 
             if (keyCode == KeyCode.Escape && keyboard.escapeKey.isPressed)

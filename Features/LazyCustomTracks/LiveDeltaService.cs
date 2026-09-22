@@ -52,6 +52,39 @@ public static class LiveDeltaService
         if (!changed)
             return false;
 
+        ApplyUiRefresh(controller);
+        return true;
+    }
+
+    /// <summary>
+    /// Awaiting-install poll: workshop resolve/hydrate only — skips local folder re-read
+    /// (full ApplyDeltas hitch while Steam downloads).
+    /// </summary>
+    public static bool PollAwaitingWorkshopInstalls(CustomTracksSelectionSceneController controller)
+    {
+        if (controller == null || _awaitingWorkshopInstall.Count == 0)
+            return false;
+
+        bool changed;
+        try
+        {
+            changed = ApplyWorkshopDeltas();
+        }
+        catch (Exception e)
+        {
+            Plugin.Logger?.LogError($"LiveDeltaService: awaiting-install poll failed: {e}");
+            return false;
+        }
+
+        if (!changed)
+            return false;
+
+        ApplyUiRefresh(controller);
+        return true;
+    }
+
+    private static void ApplyUiRefresh(CustomTracksSelectionSceneController controller)
+    {
         // One disk write for the whole delta batch — not a full rewrite per +1 track.
         TrackListCache.SaveToDisk();
 
@@ -60,7 +93,6 @@ public static class LiveDeltaService
         controller.FilterTrackMetadata(shouldRefreshTrackSelectionOptionGroup: true);
         ResetBaselineFromCache();
         Plugin.Logger?.LogInfo($"LiveDeltaService: applied deltas ({snapshot.Count} tracks)");
-        return true;
     }
 
     public static bool LocalFingerprintChanged()

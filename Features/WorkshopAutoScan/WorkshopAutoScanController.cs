@@ -17,8 +17,13 @@ public static class WorkshopAutoScanController
     private static CustomTracksSelectionSceneController _owner;
     private static bool _scanInFlight;
     private static WorkshopAutoScanOverlay _overlay;
+    private static List<WorkshopRecentItem> _stashedShowItems;
 
     public static bool IsOverlayOpen => _overlay != null && _overlay.IsOpen;
+
+    public static bool IsScanInFlight => _scanInFlight;
+
+    public static int StashCount => _stashedShowItems?.Count ?? 0;
 
     public static void OnCustomMusicOpened(CustomTracksSelectionSceneController controller)
     {
@@ -40,8 +45,46 @@ public static class WorkshopAutoScanController
 
         _scanGeneration++;
         CloseOverlay(flush: true);
+        ClearStash();
+        WorkshopAutoScanToast.DestroyInstance();
         _owner = null;
         _scanInFlight = false;
+    }
+
+    public static void ClearStash() => _stashedShowItems = null;
+
+    /// <summary>Open stashed show-list from hotkey (no re-scan); toast when empty/scanning.</summary>
+    public static void TryOpenStashFromHotkey(CustomTracksSelectionSceneController controller)
+    {
+        var action = WorkshopAutoScanOpenPolicy.ResolveHotkeyAction(
+            Plugin.IsWorkshopAutoScanActive,
+            customMusicOpen: controller != null && ReferenceEquals(_owner, controller),
+            overlayOpen: IsOverlayOpen,
+            scanInFlight: _scanInFlight,
+            stashCount: StashCount);
+
+        switch (action)
+        {
+            case WorkshopAutoScanHotkeyAction.OpenStash:
+                var items = _stashedShowItems;
+                if (items == null || items.Count == 0)
+                {
+                    WorkshopAutoScanToast.Show(WorkshopAutoScanOpenPolicy.ToastNoNewItems);
+                    return;
+                }
+
+                WorkshopAutoScanToast.Hide();
+                ShowOverlay(controller, items);
+                break;
+
+            case WorkshopAutoScanHotkeyAction.ToastNoNewItems:
+                WorkshopAutoScanToast.Show(WorkshopAutoScanOpenPolicy.ToastNoNewItems);
+                break;
+
+            case WorkshopAutoScanHotkeyAction.ToastScanning:
+                WorkshopAutoScanToast.Show(WorkshopAutoScanOpenPolicy.ToastScanning);
+                break;
+        }
     }
 
     public static void CloseOverlay(bool flush)
@@ -159,6 +202,7 @@ public static class WorkshopAutoScanController
 
             if (showItems.Count == 0)
             {
+                ClearStash();
                 if (!WorkshopSeenStore.Initialized)
                     WorkshopSeenStore.EnsureInitialized();
                 Plugin.Logger?.LogInfo("WorkshopAutoScan: no overlay items after author auto-sub");
@@ -169,13 +213,25 @@ public static class WorkshopAutoScanController
             if (gen != _scanGeneration || !ReferenceEquals(_owner, controller))
                 return;
 
+            _stashedShowItems = showItems;
+
             if (!WorkshopSeenStore.Initialized)
                 Plugin.Logger?.LogInfo(
-                    $"WorkshopAutoScan: first run — showing {showItems.Count} item(s) to browse/subscribe");
+                    $"WorkshopAutoScan: first run — {showItems.Count} item(s) ready");
             else
-                Plugin.Logger?.LogInfo($"WorkshopAutoScan: showing {showItems.Count} new item(s)");
+                Plugin.Logger?.LogInfo($"WorkshopAutoScan: {showItems.Count} new item(s) ready");
 
-            ShowOverlay(controller, showItems);
+            if (WorkshopAutoScanOpenPolicy.ShouldAutoOpenOverlay(
+                    Plugin.WorkshopAutoScanAutoOpen,
+                    showItems.Count))
+            {
+                ShowOverlay(controller, showItems);
+            }
+            else
+            {
+                Plugin.Logger?.LogInfo(
+                    $"WorkshopAutoScan: auto-open off — press {Plugin.WorkshopAutoScanKey} to open");
+            }
         }
         catch (Exception e)
         {
@@ -193,6 +249,7 @@ public static class WorkshopAutoScanController
         List<WorkshopRecentItem> items)
     {
         CloseOverlay(flush: false);
+        ClearStash();
 
         var go = new GameObject("QoLiTea_WorkshopAutoScanOverlay");
         UnityEngine.Object.DontDestroyOnLoad(go);

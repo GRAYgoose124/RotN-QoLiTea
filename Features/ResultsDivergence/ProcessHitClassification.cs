@@ -32,4 +32,17 @@ public static class ProcessHitClassification
         => hitDataCount > 0
            && positionsToAttackCount > 0
            && hitDataCount != positionsToAttackCount;
+
+    /// <summary>
+    /// Extra miss-vertical for partial swings. Skip when Miss <c>hitDatas</c> already
+    /// produced markers — otherwise we stack a vertical on timed/untimed miss marks.
+    /// </summary>
+    public static bool ShouldAppendExtraMissVertical(
+        int hitDataCount,
+        int missHitDataCount,
+        int positionsToAttackCount,
+        bool anyEnemyHitWindowOpen)
+        => missHitDataCount == 0
+           && IsPartialMiss(hitDataCount, positionsToAttackCount)
+           && anyEnemyHitWindowOpen;
 }

@@ -35,7 +35,8 @@ On **Custom Music** open, checks recent Workshop publishes (community most-recen
 1. Page 1 (30). If nothing new after seen/subscribed filter, digs pages 2–3 (stops when uniques appear; max 90).
 2. Authors you marked with **A** are silent-subscribed and skipped in the overlay.
 3. Overlay lists the rest (title + author). **Up/Down** move | **Confirm** toggles select | **A** auto-sub that author (all their rows in this list + future scans) | **Cancel** closes and subscribes the selected set. Keyboard/gamepad only (no mouse).
-4. Focused row: author + thumbnail on the right, workshop description underneath (lazy fetch). Focusing marks seen. Already-subscribed items are skipped. Lazy Custom Tracks picks up installs via live deltas.
+4. Focused row: author + thumbnail on the right, workshop description underneath (lazy fetch). Focusing marks seen (**S** on the row; first song gets **S** on open). Already-subscribed items are skipped. Lazy Custom Tracks picks up installs via live deltas.
+5. **WorkshopAutoScanAutoOpen** (default on): pop the overlay after scan. Off = scan + silent auto-sub still run; press **WorkshopAutoScanKey** (default **N**) to open the stashed list (toast **No new items** / **Scanning…** when there is nothing to open).
 
 Seen: `BepInEx/config/rotn.dimethyltea.QoLiTea/workshop-autoscan-seen.json`  
 Auto-sub authors: `BepInEx/config/rotn.dimethyltea.QoLiTea/workshop-autoscan-authors.json`.
@@ -60,7 +61,7 @@ NecroManager one-shots under **TrackSets**.
 
 ### Results divergence plot
 
-On the **results screen**, draws a scatter plot of signed timing divergence from on-beat perfect (center line = perfect; **E** top / **L** bottom mark early vs late). Gold bands mark **activated vibe-power** windows (not chart vibe monsters); fullscreen captions show per-vibe hit count and first→last monster names. Timed hits are colored dots; untimed misses are red verticals; true overhits are pink verticals. Full width along the bottom by default; **double-tap G** for opaque fullscreen (timing-bin guide lines + gold super-crit bin); **G** or **Esc** closes. Default **90%** docked opacity via `PlotOpacity`. Does not replace the stock results histogram.
+On the **results screen**, draws a scatter plot of signed timing divergence from on-beat perfect (center line = perfect; **E** top / **L** bottom mark early vs late). Gold bands mark **activated vibe-power** windows (not chart vibe monsters); fullscreen captions show per-vibe hit count and first→last monster names. Timed hits are colored dots; untimed misses (timeouts / no player press) are red verticals — not edge-stacked dots from stock’s synthetic after-window beat; true overhits are pink verticals. Full width along the bottom by default; **double-tap G** for opaque fullscreen (timing-bin guide lines + gold super-crit bin); **G** or **Esc** closes. Default **90%** docked opacity via `PlotOpacity`. Does not replace the stock results histogram.
 
 ### Practice worst sections
 
@@ -77,6 +78,8 @@ When worst sections are found and stock Practice is available, adds an **Auto** 
 | **LazyCustomTracksEnabled** | true | Custom Music lazy load / cache. |
 | **RunClearTrackListCache** | false | One-shot: clear track list cache. |
 | **WorkshopAutoScanEnabled** | true | Custom Music: new Workshop publish overlay. |
+| **WorkshopAutoScanAutoOpen** | true | Auto-open overlay after scan (off = use hotkey). |
+| **WorkshopAutoScanKey** | N | Custom Music: open stashed new Workshop list. |
 | **SkipBootIntroEnabled** | true | Skip splash media / forced boot calib / intro cinematic / title screen. |
 | **FieldOpacityEnabled** | false | Scale lane/field tile opacity. |
 | **FieldOpacity** | 100 | Tile opacity percent (`0` = invisible, `100` = stock). |

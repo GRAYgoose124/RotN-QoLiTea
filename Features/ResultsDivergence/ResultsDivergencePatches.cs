@@ -101,22 +101,28 @@ internal static class ResultsDivergencePatches
                 return;
             }
 
+            int missHitDataCount = 0;
             foreach (var hit in hitDatas)
             {
                 if (hit.InputRating != InputRating.Miss)
                     continue;
 
+                missHitDataCount++;
                 DivergenceLiveHarvest.TryAppendFailure(
                     hit.TargetBeat,
                     hit.RatingPercent,
                     hit.InputBeat,
                     hit.TargetBeat,
                     PlotHitRating.Miss,
-                    hit.Enemy?.DisplayName);
+                    hit.Enemy?.DisplayName,
+                    wasPlayerInput: true);
             }
 
-            if (ProcessHitClassification.IsPartialMiss(hitDatas.Count, positionCount)
-                && anyWindowOpen)
+            if (ProcessHitClassification.ShouldAppendExtraMissVertical(
+                    hitDatas.Count,
+                    missHitDataCount,
+                    positionCount,
+                    anyWindowOpen))
             {
                 float inputBeat = __instance.BeatmapPlayer?.FmodTimeCapsule.TrueBeatNumber ?? 0f;
                 if (inputBeat > 0f)

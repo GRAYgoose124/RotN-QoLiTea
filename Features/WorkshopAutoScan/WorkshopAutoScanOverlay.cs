@@ -453,10 +453,11 @@ public sealed class WorkshopAutoScanOverlay : MonoBehaviour
                 GUI.DrawTexture(row, _rowBg);
 
             bool pending = _pendingSubscribe.Contains(item.FileId);
-            string mark = pending ? "[X]" : "[ ]";
+            bool seen = _touched.Contains(item.FileId);
             string author = string.IsNullOrEmpty(item.Author) ? "?" : item.Author;
             string title = string.IsNullOrEmpty(item.Title) ? $"#{item.FileId}" : item.Title;
-            string prefix = $"  {mark}  {title}  —  ";
+            string prefix =
+                WorkshopAutoScanOpenPolicy.FormatSelectSeenPrefix(pending, seen) + $"{title}  —  ";
             GUIStyle labelStyle = GUI.skin.label;
             Vector2 prefixSize = labelStyle.CalcSize(new GUIContent(prefix));
             GUI.Label(row, prefix);

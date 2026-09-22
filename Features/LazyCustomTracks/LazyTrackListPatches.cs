@@ -148,14 +148,15 @@ public static class LazyTrackListPatches
             }
         }
 
-        // Workshop subscribe often fires before the install path exists — keep polling.
+        // Workshop subscribe often fires before the install path exists — keep polling
+        // (workshop-only: skip local info.json re-read that hitchs the menu).
         if (_opened && Plugin.IsLazyCustomTracksActive
             && LiveDeltaService.HasAwaitingWorkshopInstalls
             && UnityEngine.Time.realtimeSinceStartup >= _nextAwaitingWorkshopPollRealtime)
         {
             _nextAwaitingWorkshopPollRealtime =
                 UnityEngine.Time.realtimeSinceStartup + AwaitingWorkshopPollSeconds;
-            if (LiveDeltaService.ApplyDeltas(__instance))
+            if (LiveDeltaService.PollAwaitingWorkshopInstalls(__instance))
                 _cacheDirty = true;
         }
 

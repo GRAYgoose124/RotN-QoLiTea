@@ -27,6 +27,7 @@
     <Compile Include="..\Features\LazyCustomTracks\ReconcileKickPolicy.cs" Link="ReconcileKickPolicy.cs" />
     <Compile Include="..\Features\LazyCustomTracks\ReSortGatePolicy.cs" Link="ReSortGatePolicy.cs" />
     <Compile Include="..\Features\WorkshopAutoScan\WorkshopAutoScanPolicy.cs" Link="WorkshopAutoScanPolicy.cs" />
+    <Compile Include="..\Features\WorkshopAutoScan\WorkshopAutoScanOpenPolicy.cs" Link="WorkshopAutoScanOpenPolicy.cs" />
     <Compile Include="..\Features\WorkshopAutoScan\WorkshopDescriptionText.cs" Link="WorkshopDescriptionText.cs" />
     <Compile Include="..\Features\SkipBootIntro\BootSkipPolicy.cs" Link="BootSkipPolicy.cs" />
     <Compile Include="..\Features\FieldOpacity\FieldOpacityPolicy.cs" Link="FieldOpacityPolicy.cs" />
@@ -40,6 +41,7 @@
     <Compile Include="..\Features\ResultsDivergence\PracticeSpan.cs" Link="PracticeSpan.cs" />
     <Compile Include="..\Features\ResultsDivergence\ProcessHitClassification.cs" Link="ProcessHitClassification.cs" />
     <Compile Include="..\Features\ResultsDivergence\VibeWindowStats.cs" Link="VibeWindowStats.cs" />
+    <Compile Include="..\Features\ResultsDivergence\VibeLabelLayout.cs" Link="VibeLabelLayout.cs" />
     <Compile Include="..\Features\ResultsDivergence\ChartBeatSpan.cs" Link="ChartBeatSpan.cs" />
     <Compile Include="..\Features\ResultsDivergence\WorstSectionDetector.cs" Link="WorstSectionDetector.cs" />
     <Compile Include="..\Features\ResultsDivergence\DivergencePlotLayout.cs" Link="DivergencePlotLayout.cs" />

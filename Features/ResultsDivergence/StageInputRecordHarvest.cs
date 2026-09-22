@@ -44,25 +44,22 @@ internal static class StageInputRecordHarvest
                 continue;
             }
 
+            // Timeout misses have no raw row (RecordInput skips raw when wasPlayerInput=false).
+            // Live harvest owns those; without a beat we cannot place an X.
             if (!hasBeat && !response.wasPlayerInput)
+                continue;
+
+            if (!hasBeat)
                 continue;
 
             float signed;
             PlotMarkerKind marker = PlotMarkerKind.Dot;
-            if (plotRating == PlotHitRating.Miss)
+            if (plotRating == PlotHitRating.Miss || plotRating == PlotHitRating.ComboBreak)
             {
                 marker = SignedDivergenceRules.MarkerForMiss(
-                    response.ratingPercent, inputBeat, targetBeat);
+                    response.ratingPercent, inputBeat, targetBeat, response.wasPlayerInput);
                 signed = SignedDivergenceRules.SignedForMiss(
-                    response.ratingPercent, response.wasEarly, inputBeat, targetBeat);
-            }
-            else if (plotRating == PlotHitRating.ComboBreak)
-            {
-                signed = SignedDivergenceRules.ForFailure(
-                    response.ratingPercent,
-                    response.wasEarly,
-                    inputBeat,
-                    targetBeat);
+                    response.ratingPercent, response.wasEarly, inputBeat, targetBeat, response.wasPlayerInput);
             }
             else
             {

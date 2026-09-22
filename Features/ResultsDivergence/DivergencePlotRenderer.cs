@@ -301,6 +301,7 @@ internal static class DivergencePlotRenderer
             var stat = context.VibeStats[i];
             float midBeat = (stat.Span.StartBeat + stat.Span.EndBeat) * 0.5f;
             float nx = DivergencePlotLayout.BeatToX(midBeat, context.TotalBeats);
+            float ny = VibeLabelLayout.AnchorY(i);
 
             string first = string.IsNullOrEmpty(stat.FirstEnemyName) ? "?" : stat.FirstEnemyName;
             string last = string.IsNullOrEmpty(stat.LastEnemyName) ? "?" : stat.LastEnemyName;
@@ -309,8 +310,8 @@ internal static class DivergencePlotRenderer
             var go = new GameObject($"VibeStat_{i}", typeof(RectTransform));
             go.transform.SetParent(root.transform, false);
             var rt = go.GetComponent<RectTransform>();
-            rt.anchorMin = new Vector2(nx, 0.88f);
-            rt.anchorMax = new Vector2(nx, 0.88f);
+            rt.anchorMin = new Vector2(nx, ny);
+            rt.anchorMax = new Vector2(nx, ny);
             rt.pivot = new Vector2(0.5f, 0.5f);
             rt.sizeDelta = new Vector2(220f, 28f);
             rt.anchoredPosition = Vector2.zero;

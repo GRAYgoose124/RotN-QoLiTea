@@ -4,7 +4,7 @@ using Shared.TrackSelection;
 namespace QoLiTea.Features.WorkshopAutoScan;
 
 /// <summary>
-/// Kick Workshop AutoScan when Custom Music opens; flush on destroy.
+/// Kick Workshop AutoScan when Custom Music opens; hotkey opens stash; flush on destroy.
 /// </summary>
 [HarmonyPatch]
 public static class WorkshopAutoScanPatches
@@ -25,6 +25,18 @@ public static class WorkshopAutoScanPatches
 
         _openedFor = __instance;
         WorkshopAutoScanController.OnCustomMusicOpened(__instance);
+    }
+
+    [HarmonyPostfix]
+    [HarmonyPatch(
+        typeof(CustomTracksSelectionSceneController),
+        nameof(CustomTracksSelectionSceneController.Update))]
+    public static void UpdatePostfix(CustomTracksSelectionSceneController __instance)
+    {
+        if (__instance == null || __instance.InputDisabled)
+            return;
+
+        Plugin.Instance?.TryWorkshopAutoScanHotkey(__instance);
     }
 
     [HarmonyPrefix]
