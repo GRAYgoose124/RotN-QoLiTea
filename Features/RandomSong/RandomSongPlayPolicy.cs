@@ -11,4 +11,9 @@ public static class RandomSongPlayPolicy
     public static bool ShouldOpenLoadout(bool openLoadoutInstead) => openLoadoutInstead;
 
     public static bool ShouldAutoStart(bool openLoadoutInstead) => !openLoadoutInstead;
+
+    /// <summary>
+    /// When <paramref name="instantEnabled"/> is true, snap to the pick; otherwise theatrical scroll.
+    /// </summary>
+    public static bool ShouldUseInstantScroll(bool instantEnabled) => instantEnabled;
 }

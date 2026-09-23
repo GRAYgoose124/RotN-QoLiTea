@@ -6,7 +6,7 @@ Requires **[Rift of the NecroManager](https://github.com/96-LB/RiftOfTheNecroMan
 
 ## What’s in it
 
-**Jukebox (J)** — On the official or Custom Music list, pick a random playable track, scroll to it, and start at your current difficulty. Optionally open the loadout instead of auto-playing (`RandomSongOpenLoadout`).
+**Jukebox (J)** — On the official or Custom Music list, pick a random playable track, scroll to it, and start at your current difficulty. Optionally open the loadout instead of auto-playing (`RandomSongOpenLoadout`). Turn on `RandomSongInstant` to snap with no theatrical scroll.
 
 **Lazy Custom Tracks** — Custom Music opens from a disk cache and refreshes in the background, so big Workshop libraries don’t stall the menu. Workshop installs and local folder changes update the open list without a full rescan. Clear cache via NecroManager `RunClearTrackListCache` if something looks stuck.
 
@@ -38,6 +38,7 @@ Most toggles are on by default. Notable defaults / one-shots:
 |---------|---------|--------|
 | `Enabled` | on | Master kill switch |
 | `RandomSongOpenLoadout` | off | Land on loadout instead of auto-start |
+| `RandomSongInstant` | off | Snap to pick (skip theatrical scroll) |
 | `WorkshopAutoScanAutoOpen` | on | Off → use **N** after scan |
 | `FieldOpacityEnabled` | off | Then set `FieldOpacity` percent |
 | `WorstSectionPracticeEnabled` | off | Adds **Auto** on results |

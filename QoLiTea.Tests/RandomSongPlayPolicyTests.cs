@@ -13,4 +13,11 @@ public class RandomSongPlayPolicyTests
         Assert.False(RandomSongPlayPolicy.ShouldOpenLoadout(openLoadoutInstead: false));
         Assert.True(RandomSongPlayPolicy.ShouldAutoStart(openLoadoutInstead: false));
     }
+
+    [Fact]
+    public void Instant_scroll_follows_toggle()
+    {
+        Assert.True(RandomSongPlayPolicy.ShouldUseInstantScroll(instantEnabled: true));
+        Assert.False(RandomSongPlayPolicy.ShouldUseInstantScroll(instantEnabled: false));
+    }
 }

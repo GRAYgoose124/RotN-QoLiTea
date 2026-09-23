@@ -580,48 +580,60 @@ internal sealed class RandomSongDriver
             yield break;
         }
 
-        var fromPos = RandomSongRules.IndexOnRing(trackRing, group._selectedTrackIndex);
-        var toPos = RandomSongRules.IndexOnRing(trackRing, target.Value);
-        if (fromPos < 0)
-            fromPos = 0;
-        if (toPos < 0)
-        {
-            Plugin.Logger?.LogWarning($"QoLiTea: target {target.Value} not on track ring");
-            yield break;
-        }
-
-        var plan = RandomSongRules.PlanScrollToTarget(
-            fromPos, toPos, trackRing.Count, RandomSongRules.DefaultMinJukeboxSteps);
-
-        // Cap theatrical scroll only — keep the true pick and snap after if far.
-        var needsSnap = plan.TrackSteps > RandomSongRules.MaxTrackStepsPerRoll;
-        plan = RandomSongRules.CapScrollForTheater(plan, RandomSongRules.MaxTrackStepsPerRoll);
-
-        var scrollTarget = target.Value;
-        if (needsSnap)
-        {
-            var theaterLand = RandomSongRules.LandRingPos(
-                fromPos, plan.Direction, plan.TrackSteps, trackRing.Count);
-            scrollTarget = trackRing[theaterLand];
-        }
-
-        var budget = RandomSongRules.TargetScrollSeconds(trackRing.Count, plan.VisualSteps);
         var landName = metas[target.Value]?.TrackName ?? "?";
-        Plugin.Logger?.LogInfo(
-            $"QoLiTea: pick [{target.Value}] {landName} — visual={plan.VisualSteps} tracks={plan.TrackSteps} dir={plan.Direction} budget={budget:0.00}s snap={needsSnap} (from {group._selectedTrackIndex})");
 
-        yield return ScrollToIndex(
-            group, eligible, plan.Direction, plan.VisualSteps, plan.TrackSteps, budget, scrollTarget);
-
-        if (group == null || !group.isActiveAndEnabled)
-            yield break;
-
-        if (group._selectedTrackIndex != target.Value)
+        if (Plugin.RandomSongShouldUseInstantScroll)
         {
             Plugin.Logger?.LogInfo(
-                $"QoLiTea: snap selection {group._selectedTrackIndex} → pick {target.Value}");
-            SnapSelectionToIndex(group, metas, target.Value, selectedDifficulty);
+                $"QoLiTea: pick [{target.Value}] {landName} — instant snap (from {group._selectedTrackIndex})");
+            if (group._selectedTrackIndex != target.Value)
+                SnapSelectionToIndex(group, metas, target.Value, selectedDifficulty);
             yield return WaitHold(group, RandomSongRules.DeadStopHoldSeconds);
+        }
+        else
+        {
+            var fromPos = RandomSongRules.IndexOnRing(trackRing, group._selectedTrackIndex);
+            var toPos = RandomSongRules.IndexOnRing(trackRing, target.Value);
+            if (fromPos < 0)
+                fromPos = 0;
+            if (toPos < 0)
+            {
+                Plugin.Logger?.LogWarning($"QoLiTea: target {target.Value} not on track ring");
+                yield break;
+            }
+
+            var plan = RandomSongRules.PlanScrollToTarget(
+                fromPos, toPos, trackRing.Count, RandomSongRules.DefaultMinJukeboxSteps);
+
+            // Cap theatrical scroll only — keep the true pick and snap after if far.
+            var needsSnap = plan.TrackSteps > RandomSongRules.MaxTrackStepsPerRoll;
+            plan = RandomSongRules.CapScrollForTheater(plan, RandomSongRules.MaxTrackStepsPerRoll);
+
+            var scrollTarget = target.Value;
+            if (needsSnap)
+            {
+                var theaterLand = RandomSongRules.LandRingPos(
+                    fromPos, plan.Direction, plan.TrackSteps, trackRing.Count);
+                scrollTarget = trackRing[theaterLand];
+            }
+
+            var budget = RandomSongRules.TargetScrollSeconds(trackRing.Count, plan.VisualSteps);
+            Plugin.Logger?.LogInfo(
+                $"QoLiTea: pick [{target.Value}] {landName} — visual={plan.VisualSteps} tracks={plan.TrackSteps} dir={plan.Direction} budget={budget:0.00}s snap={needsSnap} (from {group._selectedTrackIndex})");
+
+            yield return ScrollToIndex(
+                group, eligible, plan.Direction, plan.VisualSteps, plan.TrackSteps, budget, scrollTarget);
+
+            if (group == null || !group.isActiveAndEnabled)
+                yield break;
+
+            if (group._selectedTrackIndex != target.Value)
+            {
+                Plugin.Logger?.LogInfo(
+                    $"QoLiTea: snap selection {group._selectedTrackIndex} → pick {target.Value}");
+                SnapSelectionToIndex(group, metas, target.Value, selectedDifficulty);
+                yield return WaitHold(group, RandomSongRules.DeadStopHoldSeconds);
+            }
         }
 
         if (!IsPlayableSelection(group, metas, selectedDifficulty, isLocked))
